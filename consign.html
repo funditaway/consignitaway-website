@@ -1,0 +1,94 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Consign an item with Consign It Away. List your products for sale across multiple marketplaces with one simple form.">
+  <title>Consign an Item | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <p class="breadcrumb"><a href="index.html">Home</a> / Consign an Item</p>
+      <h1>Consign an Item</h1>
+      <p>Add your product — we'll list it on marketplaces and handle the rest</p>
+    </div>
+  </div>
+
+  <section class="form-section">
+    <div class="container">
+      <form class="form-card" id="consign-form" onsubmit="handleConsignSubmit(event)">
+        <h2 style="color:var(--teal-900);margin-bottom:0.5rem">Main Info</h2>
+        <p style="color:var(--gray-500);margin-bottom:2rem;font-size:0.9rem">Fields marked with <span style="color:var(--orange-500)">*</span> are required</p>
+
+        <div class="form-group">
+          <label>Product name <span class="required">*</span></label>
+          <input type="text" name="productName" placeholder="e.g. Vintage Leather Jacket" required>
+        </div>
+
+        <div class="form-group">
+          <label>Category <span class="required">*</span></label>
+          <select id="category-select" onchange="handleCategoryChange(event)">
+            <option value="">Select a category</option>
+          </select>
+          <div class="tag-input" id="category-tags" style="margin-top:0.75rem"></div>
+        </div>
+
+        <div class="form-row">
+          <div class="form-group">
+            <label>Description</label>
+            <textarea name="description" rows="4" placeholder="Short description of your item"></textarea>
+          </div>
+          <div class="form-group">
+            <label>Full Description</label>
+            <textarea name="fullDescription" rows="4" placeholder="Detailed description, dimensions, history, etc."></textarea>
+          </div>
+        </div>
+
+        <div class="form-group">
+          <label>Tags</label>
+          <input type="text" name="tags" placeholder="vintage, leather, medium (comma separated)">
+        </div>
+
+        <div class="form-group">
+          <label>Available for sale</label>
+          <label class="toggle-switch">
+            <input type="checkbox" name="available" checked>
+            <span class="toggle-track"></span>
+            <span>Yes — list this item immediately</span>
+          </label>
+        </div>
+
+        <div class="form-group">
+          <label>CIA Condition <span class="required">*</span></label>
+          <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:0.75rem">Select the condition that best describes your item</p>
+          <div class="condition-grid" id="condition-grid"></div>
+        </div>
+
+        <div class="form-group">
+          <label>Photos</label>
+          <div style="border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:2.5rem;text-align:center;color:var(--gray-500)">
+            <p style="font-size:2rem;margin-bottom:0.5rem">📷</p>
+            <p>Drag & drop images here, or <strong style="color:var(--teal-600)">browse files</strong></p>
+            <p style="font-size:0.8rem;margin-top:0.5rem">Up to 8 images · JPG, PNG · Max 5MB each</p>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem">
+          <button type="submit" class="btn btn-primary btn-lg">Submit for Listing</button>
+          <a href="dashboard.html" class="btn btn-outline btn-lg">Save as Draft</a>
+        </div>
+      </form>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script src="js/consign.js"></script>
+</body>
+</html>

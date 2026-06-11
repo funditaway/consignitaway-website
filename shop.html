@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shop consigned items at Consign It Away. Clothing, electronics, collectibles and more with free shipping on select items.">
+  <title>Shop Online | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <p class="breadcrumb"><a href="index.html">Home</a> / Shop Online</p>
+      <h1>Shop Online</h1>
+      <p>Browse quality consigned items from local sellers</p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="shop-toolbar">
+        <div class="filter-chips" id="filter-chips">
+          <button class="chip active" data-cat="all">All</button>
+        </div>
+        <div>
+          <label for="sort-select" style="font-size:0.9rem;color:var(--gray-500);margin-right:0.5rem">Sort by:</label>
+          <select id="sort-select" style="padding:0.5rem;border-radius:8px;border:1px solid var(--gray-300)">
+            <option value="newest">Newest first</option>
+            <option value="price-low">Price: Low to High</option>
+            <option value="price-high">Price: High to Low</option>
+          </select>
+        </div>
+      </div>
+      <div class="product-grid" id="product-grid"></div>
+      <div id="empty-state" style="display:none;text-align:center;padding:3rem;color:var(--gray-500)">
+        <p style="font-size:3rem;margin-bottom:1rem">🔍</p>
+        <h3>No products found</h3>
+        <p>Try a different category or search term.</p>
+        <a href="consign.html" class="btn btn-primary" style="margin-top:1.5rem">Consign an Item</a>
+      </div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let activeCategory = 'all';
+    let searchQuery = '';
+
+    function initShop() {
+      const chips = document.getElementById('filter-chips');
+      chips.innerHTML = '<button class="chip active" data-cat="all">All</button>' +
+        CATEGORIES.map(c => `<button class="chip" data-cat="${c.id}">${c.name}</button>`).join('');
+
+      chips.addEventListener('click', e => {
+        if (!e.target.classList.contains('chip')) return;
+        chips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
+        e.target.classList.add('active');
+        activeCategory = e.target.dataset.cat;
+        renderProducts();
+      });
+
+      document.getElementById('sort-select').addEventListener('change', renderProducts);
+
+      activeCategory = getQueryParam('cat') || 'all';
+      searchQuery = getQueryParam('q') || '';
+
+      if (activeCategory !== 'all') {
+        chips.querySelectorAll('.chip').forEach(c => {
+          c.classList.toggle('active', c.dataset.cat === activeCategory);
+        });
+      }
+
+      renderProducts();
+    }
+
+    function renderProducts() {
+      let items = getProductsByCategory(activeCategory);
+
+      if (searchQuery) {
+        const q = searchQuery.toLowerCase();
+        items = items.filter(p => p.name.toLowerCase().includes(q));
+      }
+
+      const sort = document.getElementById('sort-select').value;
+      if (sort === 'price-low') items.sort((a, b) => a.price - b.price);
+      else if (sort === 'price-high') items.sort((a, b) => b.price - a.price);
+      else items.sort((a, b) => b.id - a.id);
+
+      const grid = document.getElementById('product-grid');
+      const empty = document.getElementById('empty-state');
+
+      if (items.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+      } else {
+        grid.style.display = 'grid';
+        empty.style.display = 'none';
+        grid.innerHTML = items.map(renderProductCard).join('');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', initShop);
+  </script>
+</body>
+</html>

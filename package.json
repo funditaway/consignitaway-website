@@ -1,0 +1,9 @@
+{
+  "name": "consignitaway-website",
+  "version": "1.0.0",
+  "description": "Consign It Away - Springfield consignment marketplace",
+  "scripts": {
+    "start": "npx --yes serve . -p 3000",
+    "dev": "npx --yes serve . -p 3000"
+  }
+}

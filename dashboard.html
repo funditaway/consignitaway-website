@@ -1,0 +1,134 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Consign It Away seller dashboard. Manage products, orders, and your vendor plan.">
+  <title>Seller Dashboard | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container dashboard-layout">
+    <aside class="sidebar">
+      <h4>Dashboard</h4>
+      <ul class="sidebar-nav">
+        <li><a href="#" class="active" data-panel="products">📋 Products</a></li>
+        <li><a href="#" data-panel="orders">🚚 Orders</a></li>
+        <li><a href="#" data-panel="messages">💬 Messages</a></li>
+        <li><a href="vendor-plans.html">⭐ Upgrade Plan</a></li>
+        <li><a href="consign.html">➕ Add Product</a></li>
+      </ul>
+    </aside>
+
+    <main class="dashboard-main" id="dashboard-main">
+      <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+        <div>
+          <h1>Products</h1>
+          <p style="color:var(--gray-500)">Manage your consigned inventory</p>
+        </div>
+        <a href="vendor-plans.html" class="btn btn-primary">Upgrade Your Plan</a>
+      </div>
+
+      <div class="dashboard-stats">
+        <div class="stat-card">
+          <div class="label">Active Listings</div>
+          <div class="value" id="stat-listings">0</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Listings Remaining</div>
+          <div class="value" id="stat-remaining">50</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Open Orders</div>
+          <div class="value">2</div>
+        </div>
+        <div class="stat-card">
+          <div class="label">Total Earnings</div>
+          <div class="value">$847</div>
+        </div>
+      </div>
+
+      <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+        <input type="search" placeholder="Search keywords" style="flex:1;min-width:200px;padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
+        <select style="padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
+          <option>Any category</option>
+          ${''}
+        </select>
+        <button class="btn btn-secondary">Search</button>
+      </div>
+
+      <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem" id="listing-count-text">0 products · Starter plan (50 max)</p>
+
+      <a href="consign.html" class="btn btn-primary" style="margin-bottom:1.5rem">Add Product</a>
+
+      <div style="overflow-x:auto">
+        <table class="data-table" id="products-table">
+          <thead>
+            <tr>
+              <th>Name</th>
+              <th>Category</th>
+              <th>Condition</th>
+              <th>SKU</th>
+              <th>Status</th>
+              <th>Actions</th>
+            </tr>
+          </thead>
+          <tbody id="products-tbody"></tbody>
+        </table>
+      </div>
+    </main>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function renderDashboard() {
+      const listings = JSON.parse(localStorage.getItem('cia-listings') || '[]');
+      const tbody = document.getElementById('products-tbody');
+      const maxListings = 50;
+      const remaining = Math.max(0, maxListings - listings.length);
+
+      document.getElementById('stat-listings').textContent = listings.length;
+      document.getElementById('stat-remaining').textContent = remaining;
+      document.getElementById('listing-count-text').textContent =
+        `${listings.length} products · ${remaining} listings remaining on Starter plan`;
+
+      if (listings.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-500)">
+          No products yet. <a href="consign.html">Consign your first item</a>
+        </td></tr>`;
+        return;
+      }
+
+      tbody.innerHTML = listings.map((item, i) => {
+        const cats = item.categories.map(id => CATEGORIES.find(c => c.id === id)?.name || id).join(', ');
+        return `<tr>
+          <td><strong>${item.name}</strong></td>
+          <td>${cats}</td>
+          <td><span class="condition-tag">${item.condition}</span></td>
+          <td style="font-family:monospace;font-size:0.85rem">${item.sku}</td>
+          <td>${item.available ? '<span style="color:var(--teal-600)">● Active</span>' : 'Draft'}</td>
+          <td class="table-actions">
+            <button title="Edit" onclick="showToast('Edit coming soon')">✏️</button>
+            <button title="Delete" onclick="deleteListing(${i})">🗑️</button>
+          </td>
+        </tr>`;
+      }).join('');
+    }
+
+    function deleteListing(index) {
+      const listings = JSON.parse(localStorage.getItem('cia-listings') || '[]');
+      listings.splice(index, 1);
+      localStorage.setItem('cia-listings', JSON.stringify(listings));
+      renderDashboard();
+      showToast('Product removed');
+    }
+
+    document.addEventListener('DOMContentLoaded', renderDashboard);
+  </script>
+</body>
+</html>
