@@ -198,13 +198,29 @@ async function handleConsignSubmit(e) {
     sku: 'CIA-' + Date.now().toString(36).toUpperCase(),
     available: form.available.checked,
     createdAt: new Date().toISOString(),
-    photos: selectedPhotos.slice(0, 8), // data URLs for demo (or upgrade to hosted)
+    photos: selectedPhotos.slice(0, 8),
   };
 
   try {
-    await window.saveListing(listing);
+    const saved = await window.saveListing(listing);
+    const actualListingId = saved?.item?.id || listing.sku;
+
+    // Publish to selected platforms via our new multi-platform API
+    const selectedPlatforms = Array.from(form.querySelectorAll('input[name="platforms"]:checked')).map(cb => cb.value);
+
+    if (selectedPlatforms.length > 0 && window.API_BASE) {
+      try {
+        await fetch(`${window.API_BASE || ''}/api/publish-all?sellerId=${encodeURIComponent(window.getCurrentSellerId ? window.getCurrentSellerId() : 'demo-seller')}`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ listingId: actualListingId, platforms: selectedPlatforms })
+        });
+      } catch (e) {
+        console.warn('Initial publish failed (will be available in dashboard)', e);
+      }
+    }
   } catch (err) {
-    // already handled in saveListing fallback
+    // fallback already handled
   }
 
   // reset photos for next time

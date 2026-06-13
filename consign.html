@@ -82,6 +82,18 @@
           <small style="color:var(--gray-500)">Photos are stored locally in your browser for this demo (data URLs).</small>
         </div>
 
+        <div class="form-group">
+          <label>Publish to platforms (we will handle the rest)</label>
+          <div style="display:flex; flex-wrap:wrap; gap:0.75rem; margin-top:0.5rem">
+            <label><input type="checkbox" name="platforms" value="ebay" checked> eBay</label>
+            <label><input type="checkbox" name="platforms" value="amazon"> Amazon</label>
+            <label><input type="checkbox" name="platforms" value="facebook"> Facebook / Instagram</label>
+            <label><input type="checkbox" name="platforms" value="whatnot"> Whatnot</label>
+            <label><input type="checkbox" name="platforms" value="internal" checked> Our Store</label>
+          </div>
+          <small style="color:var(--gray-500)">You can change this later in your dashboard. We use each platform's official API.</small>
+        </div>
+
         <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem">
           <button type="submit" class="btn btn-primary btn-lg">Submit for Listing</button>
           <a href="dashboard.html" class="btn btn-outline btn-lg">Save as Draft</a>
