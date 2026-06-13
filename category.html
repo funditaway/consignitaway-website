@@ -53,7 +53,8 @@
     const catId = new URLSearchParams(location.search).get('cat') || 'all';
     const cat = CATEGORIES.find(c => c.id === catId);
 
-    function render() {
+    async function render() {
+      await (window.loadCatalog ? loadCatalog() : Promise.resolve());
       const title = cat ? cat.name : 'All Categories';
       document.title = title + ' | Consign It Away';
       document.getElementById('cat-title').textContent = title;

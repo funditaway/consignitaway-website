@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Shop consigned items at Consign It Away. Clothing, electronics, collectibles and more with free shipping on select items.">
+  <meta name="description" content="Shop 467+ consigned items at Consign It Away. Auto parts, collectibles, clothing and more.">
   <title>Shop Online | Consign It Away</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
@@ -14,7 +14,7 @@
     <div class="container">
       <p class="breadcrumb"><a href="index.html">Home</a> / Shop Online</p>
       <h1>Shop Online</h1>
-      <p>Browse quality consigned items from local sellers</p>
+      <p id="shop-count">Loading catalog...</p>
     </div>
   </div>
 
@@ -34,6 +34,7 @@
         </div>
       </div>
       <div class="product-grid" id="product-grid"></div>
+      <div id="pagination" style="display:flex;justify-content:center;gap:0.5rem;margin-top:2rem;flex-wrap:wrap"></div>
       <div id="empty-state" style="display:none;text-align:center;padding:3rem;color:var(--gray-500)">
         <p style="font-size:3rem;margin-bottom:1rem">🔍</p>
         <h3>No products found</h3>
@@ -48,10 +49,15 @@
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
+    const PAGE_SIZE = 24;
     let activeCategory = 'all';
     let searchQuery = '';
+    let currentPage = 1;
+    let filteredItems = [];
 
-    function initShop() {
+    async function initShop() {
+      await loadCatalog();
+
       const chips = document.getElementById('filter-chips');
       chips.innerHTML = '<button class="chip active" data-cat="all">All</button>' +
         CATEGORIES.map(c => `<button class="chip" data-cat="${c.id}">${c.name}</button>`).join('');
@@ -61,13 +67,15 @@
         chips.querySelectorAll('.chip').forEach(c => c.classList.remove('active'));
         e.target.classList.add('active');
         activeCategory = e.target.dataset.cat;
+        currentPage = 1;
         renderProducts();
       });
 
-      document.getElementById('sort-select').addEventListener('change', renderProducts);
+      document.getElementById('sort-select').addEventListener('change', () => { currentPage = 1; renderProducts(); });
 
       activeCategory = getQueryParam('cat') || 'all';
       searchQuery = getQueryParam('q') || '';
+      currentPage = parseInt(getQueryParam('page') || '1', 10);
 
       if (activeCategory !== 'all') {
         chips.querySelectorAll('.chip').forEach(c => {
@@ -78,30 +86,65 @@
       renderProducts();
     }
 
-    function renderProducts() {
+    function getFilteredItems() {
       let items = getProductsByCategory(activeCategory);
-
       if (searchQuery) {
         const q = searchQuery.toLowerCase();
-        items = items.filter(p => p.name.toLowerCase().includes(q));
+        items = items.filter(p =>
+          p.name.toLowerCase().includes(q) ||
+          (p.description || '').toLowerCase().includes(q) ||
+          (p.categories || []).some(c => c.toLowerCase().includes(q))
+        );
       }
-
       const sort = document.getElementById('sort-select').value;
       if (sort === 'price-low') items.sort((a, b) => a.price - b.price);
       else if (sort === 'price-high') items.sort((a, b) => b.price - a.price);
       else items.sort((a, b) => b.id - a.id);
+      return items;
+    }
+
+    function renderProducts() {
+      filteredItems = getFilteredItems();
+      const total = filteredItems.length;
+      const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+      if (currentPage > totalPages) currentPage = totalPages;
+
+      document.getElementById('shop-count').textContent =
+        `${total} consigned items from local sellers`;
+
+      const start = (currentPage - 1) * PAGE_SIZE;
+      const pageItems = filteredItems.slice(start, start + PAGE_SIZE);
 
       const grid = document.getElementById('product-grid');
       const empty = document.getElementById('empty-state');
 
-      if (items.length === 0) {
+      if (total === 0) {
         grid.style.display = 'none';
         empty.style.display = 'block';
-      } else {
-        grid.style.display = 'grid';
-        empty.style.display = 'none';
-        grid.innerHTML = items.map(renderProductCard).join('');
+        document.getElementById('pagination').innerHTML = '';
+        return;
       }
+
+      grid.style.display = 'grid';
+      empty.style.display = 'none';
+      grid.innerHTML = pageItems.map(renderProductCard).join('');
+
+      const pag = document.getElementById('pagination');
+      if (totalPages <= 1) { pag.innerHTML = ''; return; }
+
+      let html = '';
+      if (currentPage > 1) html += `<button class="chip" onclick="goPage(${currentPage - 1})">← Prev</button>`;
+      for (let i = Math.max(1, currentPage - 2); i <= Math.min(totalPages, currentPage + 2); i++) {
+        html += `<button class="chip ${i === currentPage ? 'active' : ''}" onclick="goPage(${i})">${i}</button>`;
+      }
+      if (currentPage < totalPages) html += `<button class="chip" onclick="goPage(${currentPage + 1})">Next →</button>`;
+      pag.innerHTML = html;
+    }
+
+    function goPage(n) {
+      currentPage = n;
+      renderProducts();
+      window.scrollTo({ top: 0, behavior: 'smooth' });
     }
 
     document.addEventListener('DOMContentLoaded', initShop);

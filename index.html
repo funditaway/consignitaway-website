@@ -171,8 +171,9 @@
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
-    document.addEventListener('DOMContentLoaded', () => {
+    document.addEventListener('DOMContentLoaded', async () => {
       renderCategoryCards(document.getElementById('home-categories'));
+      await loadCatalog();
       const grid = document.getElementById('featured-products');
       if (grid) grid.innerHTML = PRODUCTS.slice(0, 4).map(renderProductCard).join('');
     });

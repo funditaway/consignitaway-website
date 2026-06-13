@@ -88,7 +88,8 @@ function updateCartBadge() {
 }
 
 function addToCart(productId) {
-  const product = PRODUCTS.find(p => p.id === productId);
+  const product = (typeof findProductById === 'function' ? findProductById(productId) : null)
+    || PRODUCTS.find(p => p.id === productId);
   if (!product) return;
   cart.push(product);
   saveCart();
@@ -190,6 +191,9 @@ function initFooter() {
           <h4>Shop</h4>
           <ul>
             <li><a href="shop.html">Browse All</a></li>
+            <li><a href="deals.html">Daily Deals</a></li>
+            <li><a href="brands.html">Brands</a></li>
+            <li><a href="product.html">Product Details</a></li>
             <li><a href="shop.html?cat=clothing">Clothing</a></li>
             <li><a href="shop.html?cat=electronics">Electronics</a></li>
             <li><a href="shop.html?cat=collectibles">Collectibles</a></li>
@@ -202,6 +206,9 @@ function initFooter() {
             <li><a href="how-it-works.html">How It Works</a></li>
             <li><a href="vendor-plans.html">Vendor Plans</a></li>
             <li><a href="dashboard.html">Seller Dashboard</a></li>
+            <li><a href="connections.html">Marketplace Connections</a></li>
+            <li><a href="payouts.html">Payouts &amp; Earnings</a></li>
+            <li><a href="account.html">My Account</a></li>
           </ul>
         </div>
         <div>
@@ -209,6 +216,8 @@ function initFooter() {
           <ul>
             <li><a href="tel:4177201199">(417) 720-1199</a></li>
             <li><a href="mailto:info@consignitaway.com">info@consignitaway.com</a></li>
+            <li><a href="faq.html">FAQ / Help</a></li>
+            <li><a href="about.html">About Us</a></li>
             <li>1522-1526 S Glenstone Ave</li>
             <li>Springfield, MO 65804</li>
             <li>87 Buena Vista Pkwy</li>
@@ -221,7 +230,8 @@ function initFooter() {
         <span>
           <a href="https://www.facebook.com/consignitaway/" target="_blank" rel="noopener">Facebook</a> ·
           <a href="https://www.instagram.com/consignitaway/" target="_blank" rel="noopener">Instagram</a> ·
-          <a href="https://www.whatnot.com/user/consignitaway" target="_blank" rel="noopener">Whatnot</a>
+          <a href="https://www.whatnot.com/user/consignitaway" target="_blank" rel="noopener">Whatnot</a> ·
+          <a href="terms.html">Terms</a> · <a href="privacy.html">Privacy</a> · <a href="returns.html">Returns</a>
         </span>
       </div>
     </div>

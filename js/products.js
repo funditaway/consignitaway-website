@@ -13,7 +13,7 @@ const CATEGORIES = [
 
 const CONDITIONS = ['New', 'Like New', 'Very Good', 'Good', 'Acceptable', 'Collectible'];
 
-const PRODUCTS = [
+const DEMO_PRODUCTS = [
   { id: 1, name: 'Flower Stapler', category: 'office', price: 12.99, condition: 'Like New', emoji: '🌸', image: 'assets/flower-stapler.jpg', shipping: true },
   { id: 2, name: 'Boyfriend T-Shirt with Chest Logo', category: 'clothing', price: 24.00, condition: 'Very Good', emoji: '👕', image: 'assets/boyfriend-tshirt.jpg', shipping: true },
   { id: 3, name: 'Vintage Leather Blazer', category: 'clothing', price: 89.00, condition: 'Good', emoji: '🧥', image: 'assets/vintage-leather-blazer.jpg', shipping: true },
@@ -28,22 +28,65 @@ const PRODUCTS = [
   { id: 12, name: 'Baby Stroller - Lightweight', category: 'baby', price: 120.00, condition: 'Very Good', emoji: '🍼', image: 'assets/baby-stroller.jpg', shipping: false },
 ];
 
-window.PRODUCTS = PRODUCTS; // for product detail modal etc.
+let CATALOG_PRODUCTS = [];
+let PRODUCTS = [...DEMO_PRODUCTS];
+let catalogLoaded = false;
+let catalogLoadPromise = null;
+
+async function loadCatalog() {
+  if (catalogLoaded) return PRODUCTS;
+  if (catalogLoadPromise) return catalogLoadPromise;
+
+  catalogLoadPromise = fetch('js/products-catalog.json')
+    .then(r => r.ok ? r.json() : [])
+    .then(catalog => {
+      CATALOG_PRODUCTS = Array.isArray(catalog) ? catalog : [];
+      const demoIds = new Set(DEMO_PRODUCTS.map(p => p.id));
+      PRODUCTS = [
+        ...DEMO_PRODUCTS,
+        ...CATALOG_PRODUCTS.filter(p => !demoIds.has(p.id)),
+      ];
+      catalogLoaded = true;
+      window.PRODUCTS = PRODUCTS;
+      return PRODUCTS;
+    })
+    .catch(() => {
+      PRODUCTS = [...DEMO_PRODUCTS];
+      window.PRODUCTS = PRODUCTS;
+      return PRODUCTS;
+    });
+
+  return catalogLoadPromise;
+}
+
+function getAllProducts() {
+  return PRODUCTS;
+}
+
+function findProductById(id) {
+  const num = parseInt(id, 10);
+  return PRODUCTS.find(p => p.id === num || p.id == id || p.sku === id);
+}
 
 function getProductsByCategory(categoryId) {
-  if (!categoryId || categoryId === 'all') return PRODUCTS;
-  return PRODUCTS.filter(p => p.category === categoryId);
+  const list = PRODUCTS;
+  if (!categoryId || categoryId === 'all') return list;
+  return list.filter(p => p.category === categoryId);
 }
 
 function formatPrice(price) {
-  return '$' + price.toFixed(2);
+  return '$' + Number(price).toFixed(2);
+}
+
+function productEmoji(category) {
+  const cat = CATEGORIES.find(c => c.id === category);
+  return cat ? cat.emoji : '📦';
 }
 
 function renderProductCard(product) {
-  const cat = CATEGORIES.find(c => c.id === product.category);
-  const imgHtml = product.image 
-    ? `<img src="${product.image}" alt="${product.name}" loading="lazy">` 
-    : `<span>${product.emoji}</span>`;
+  const imgHtml = product.image
+    ? `<img src="${product.image}" alt="${product.name}" loading="lazy" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>${product.emoji || productEmoji(product.category)}</span>')">`
+    : `<span>${product.emoji || productEmoji(product.category)}</span>`;
   return `
     <a href="product.html?id=${product.id}" class="product-card" style="text-decoration:none;color:inherit" data-id="${product.id}">
       <div class="product-image">
@@ -71,3 +114,11 @@ function renderCategoryCards(container, linkPrefix = 'category.html?cat=') {
     </a>
   `).join('');
 }
+
+window.PRODUCTS = PRODUCTS;
+window.loadCatalog = loadCatalog;
+window.findProductById = findProductById;
+window.getAllProducts = getAllProducts;
+window.CATEGORIES = CATEGORIES;
+
+document.addEventListener('DOMContentLoaded', () => loadCatalog());

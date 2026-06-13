@@ -7,6 +7,8 @@
     "dev": "npx --yes serve . -p 3000",
     "deploy:cf": "npx wrangler pages deploy . --project-name=consignitaway",
     "deploy:worker": "npx wrangler deploy --config wrangler-worker.toml",
-    "dns:update": "powershell -ExecutionPolicy Bypass -File deploy-dns.ps1"
+    "dns:update": "powershell -ExecutionPolicy Bypass -File deploy-dns.ps1",
+    "dns:godaddy": "powershell -ExecutionPolicy Bypass -File deploy-dns-godaddy.ps1",
+    "import:catalog": "powershell -ExecutionPolicy Bypass -File scripts/import-catalog.ps1"
   }
 }

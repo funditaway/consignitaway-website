@@ -59,14 +59,16 @@
       return parseInt(params.get('id'));
     }
 
-    function renderProductDetail() {
+    async function renderProductDetail() {
+      await (window.loadCatalog ? loadCatalog() : Promise.resolve());
       const id = getProductIdFromUrl();
       if (!id) {
         document.getElementById('product-detail').innerHTML = '<p>Product not found. <a href="shop.html">Browse all items</a></p>';
         return;
       }
 
-      let product = (window.PRODUCTS || PRODUCTS).find(p => p.id === id);
+      let product = (typeof findProductById === 'function') ? findProductById(id) : null;
+      if (!product) product = (window.PRODUCTS || PRODUCTS).find(p => p.id === id);
       if (!product && window.__currentListings) {
         product = window.__currentListings.find(p => p.id == id || p.sku == id);
       }
