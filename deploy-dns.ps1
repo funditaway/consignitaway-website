@@ -3,7 +3,11 @@
 
 param(
     [string]$ZoneName = "consignitaway.com",
-    [string]$Token = $env:CLOUDFLARE_API_TOKEN
+    [string]$Token = $env:CLOUDFLARE_API_TOKEN,
+    # For GitHub Pages: the user/org .github.io target for this repo.
+    # From git remote this project uses funditaway.github.io (project page under that org).
+    # Do NOT include https:// or repo name; GH Pages + custom domain in repo settings handles it.
+    [string]$GitHubTarget = "funditaway.github.io"
 )
 
 if (-not $Token) {
@@ -55,13 +59,14 @@ foreach ($ip in $githubIps) {
 $wwwBody = @{
     type = "CNAME"
     name = "www"
-    content = "funditaway.github.io"
+    content = $GitHubTarget
     proxied = $false
     ttl = 1
 } | ConvertTo-Json
 
 Invoke-RestMethod -Method Post -Uri "https://api.cloudflare.com/client/v4/zones/$zoneId/dns_records" -Headers $headers -Body $wwwBody | Out-Null
-Write-Host "Added CNAME: www -> funditaway.github.io (DNS only)"
+Write-Host "Added CNAME: www -> $GitHubTarget (DNS only)"
 Write-Host ""
-Write-Host "DNS updated! Site should be live at https://consignitaway.com within 5-10 minutes."
-Write-Host "Enable HTTPS in GitHub: Settings > Pages > Enforce HTTPS"
+Write-Host "DNS updated! Site should be live at https://consignitaway.com within 5-10 minutes (propagation may take longer)."
+Write-Host "If using GitHub Pages: In repo Settings > Pages, add custom domain consignitaway.com , select the branch, and enforce HTTPS."
+Write-Host "If using Cloudflare Pages instead: Point DNS (CNAME www + apex) to your <your-project>.pages.dev hostname. CF Pages handles HTTPS automatically."

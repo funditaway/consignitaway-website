@@ -4,6 +4,9 @@
   "description": "Consign It Away - Springfield consignment marketplace",
   "scripts": {
     "start": "npx --yes serve . -p 3000",
-    "dev": "npx --yes serve . -p 3000"
+    "dev": "npx --yes serve . -p 3000",
+    "deploy:cf": "npx wrangler pages deploy . --project-name=consignitaway",
+    "deploy:worker": "npx wrangler deploy --config wrangler-worker.toml",
+    "dns:update": "powershell -ExecutionPolicy Bypass -File deploy-dns.ps1"
   }
 }

@@ -1,5 +1,6 @@
 let selectedCondition = '';
 let selectedCategories = [];
+let selectedPhotos = []; // array of data: URLs for user-uploaded images
 
 function initConsignForm() {
   const conditionGrid = document.getElementById('condition-grid');
@@ -73,7 +74,84 @@ function handleCategoryChange(e) {
   e.target.value = '';
 }
 
-function handleConsignSubmit(e) {
+/* ========== Photo Upload Handling (real drag/drop + previews + data URLs) ========== */
+function initPhotoUpload() {
+  const dropzone = document.getElementById('photo-dropzone');
+  const input = document.getElementById('photo-input');
+  const previews = document.getElementById('photo-previews');
+  if (!dropzone || !input) return;
+
+  // Click anywhere on zone (except explicit browse link) triggers file picker
+  dropzone.addEventListener('click', (e) => {
+    if (e.target.tagName === 'SPAN' || e.target.closest('span')) return; // let the browse span handle itself
+    input.click();
+  });
+
+  input.addEventListener('change', () => {
+    if (input.files && input.files.length) handlePhotoFiles(input.files);
+    input.value = ''; // allow re-selecting same file
+  });
+
+  // Drag & drop
+  ['dragenter', 'dragover'].forEach(ev => {
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropzone.classList.add('dragover');
+    });
+  });
+  ['dragleave', 'dragend', 'drop'].forEach(ev => {
+    dropzone.addEventListener(ev, (e) => {
+      e.preventDefault();
+      dropzone.classList.remove('dragover');
+    });
+  });
+  dropzone.addEventListener('drop', (e) => {
+    const files = e.dataTransfer.files;
+    if (files && files.length) handlePhotoFiles(files);
+  });
+}
+
+function handlePhotoFiles(fileList) {
+  const previewsContainer = document.getElementById('photo-previews');
+  const max = 8;
+  let added = 0;
+
+  Array.from(fileList).forEach(file => {
+    if (selectedPhotos.length + added >= max) return;
+    if (!file.type.startsWith('image/')) return;
+    if (file.size > 5 * 1024 * 1024) {
+      showToast('One or more files exceed 5MB limit');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (ev) => {
+      const dataUrl = ev.target.result;
+      selectedPhotos.push(dataUrl);
+      renderPhotoPreviews();
+    };
+    reader.readAsDataURL(file);
+    added++;
+  });
+}
+
+function renderPhotoPreviews() {
+  const container = document.getElementById('photo-previews');
+  if (!container) return;
+  container.innerHTML = selectedPhotos.map((src, i) => `
+    <div class="photo-preview" data-index="${i}">
+      <img src="${src}" alt="Preview ${i+1}">
+      <button type="button" class="remove" onclick="removePhoto(${i})" aria-label="Remove photo">×</button>
+    </div>
+  `).join('');
+}
+
+function removePhoto(index) {
+  selectedPhotos.splice(index, 1);
+  renderPhotoPreviews();
+}
+
+async function handleConsignSubmit(e) {
   e.preventDefault();
   const form = e.target;
   const name = form.productName.value.trim();
@@ -92,6 +170,25 @@ function handleConsignSubmit(e) {
     return;
   }
 
+  // Seller plan enforcement (demo)
+  const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+  const plan = (user && user.plan) || 'starter';
+  const limits = { starter: 50, professional: 500, enterprise: 999999 };
+  const limit = limits[plan] || 50;
+
+  // Count current active (async but for demo use sync local or window cache)
+  let currentCount = 0;
+  try {
+    const cached = window.__currentListings || JSON.parse(localStorage.getItem('cia-listings') || '[]');
+    currentCount = cached.filter(l => l.available !== false).length;
+  } catch(e) {}
+
+  if (currentCount >= limit) {
+    showToast(`Limit reached (${limit} for ${plan} plan). Upgrade in Vendor Plans.`);
+    setTimeout(() => window.location.href = 'vendor-plans.html', 1200);
+    return;
+  }
+
   const listing = {
     name,
     categories: selectedCategories,
@@ -101,14 +198,28 @@ function handleConsignSubmit(e) {
     sku: 'CIA-' + Date.now().toString(36).toUpperCase(),
     available: form.available.checked,
     createdAt: new Date().toISOString(),
+    photos: selectedPhotos.slice(0, 8), // data URLs for demo (or upgrade to hosted)
   };
 
-  const listings = JSON.parse(localStorage.getItem('cia-listings') || '[]');
-  listings.push(listing);
-  localStorage.setItem('cia-listings', JSON.stringify(listings));
+  try {
+    await window.saveListing(listing);
+  } catch (err) {
+    // already handled in saveListing fallback
+  }
+
+  // reset photos for next time
+  selectedPhotos = [];
+  const pv = document.getElementById('photo-previews');
+  if (pv) pv.innerHTML = '';
 
   showToast('Item submitted! We\'ll list it on marketplaces for you.');
   setTimeout(() => window.location.href = 'dashboard.html', 1500);
 }
 
-document.addEventListener('DOMContentLoaded', initConsignForm);
+/* Expose for any future inline scripts if needed */
+window.getSelectedPhotos = () => selectedPhotos;
+
+document.addEventListener('DOMContentLoaded', () => {
+  initConsignForm();
+  initPhotoUpload();
+});

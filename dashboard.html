@@ -54,7 +54,6 @@
         <input type="search" placeholder="Search keywords" style="flex:1;min-width:200px;padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
         <select style="padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
           <option>Any category</option>
-          ${''}
         </select>
         <button class="btn btn-secondary">Search</button>
       </div>
@@ -67,6 +66,7 @@
         <table class="data-table" id="products-table">
           <thead>
             <tr>
+              <th>Photo</th>
               <th>Name</th>
               <th>Category</th>
               <th>Condition</th>
@@ -86,49 +86,304 @@
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
-    function renderDashboard() {
-      const listings = JSON.parse(localStorage.getItem('cia-listings') || '[]');
-      const tbody = document.getElementById('products-tbody');
+    let currentPanel = 'products';
+
+    async function renderDashboard() {
+      const listings = await (window.loadListings ? window.loadListings() : Promise.resolve(JSON.parse(localStorage.getItem('cia-listings') || '[]')));
+      const orders = await (window.loadOrders ? window.loadOrders() : Promise.resolve(JSON.parse(localStorage.getItem('cia-orders') || '[]')));
+
+      // store for closures in this scope if needed
+      window.__currentListings = listings;
+      window.__currentOrders = orders;
+
+      renderProductsPanel(listings);
+      renderOrdersPanel(orders, false);
+      setupPanelSwitching();
+      updateOpenOrdersStat(orders);
+    }
+
+    function setupPanelSwitching() {
+      const main = document.getElementById('dashboard-main');
+      document.querySelectorAll('.sidebar-nav a[data-panel]').forEach(link => {
+        link.addEventListener('click', (e) => {
+          const panel = link.dataset.panel;
+          if (!panel) return;
+          e.preventDefault();
+
+          // visual active
+          document.querySelectorAll('.sidebar-nav a').forEach(a => a.classList.remove('active'));
+          link.classList.add('active');
+
+          // simple show/hide by re-rendering main area or toggling sections
+          if (panel === 'products') {
+            currentPanel = 'products';
+            renderProductsPanel();
+          } else if (panel === 'orders') {
+            currentPanel = 'orders';
+            renderOrdersPanel(true);
+          } else if (panel === 'messages') {
+            currentPanel = 'messages';
+            main.innerHTML = `
+              <h1>Messages</h1>
+              <p style="color:var(--gray-500)">Demo inbox</p>
+              <div style="margin-top:1rem">
+                <div class="stat-card" style="margin-bottom:0.75rem">
+                  <strong>Buyer (eBay)</strong><br>
+                  <span style="font-size:0.9rem">Hi, is the Bluetooth Speaker still available? Can you ship today?</span>
+                  <div style="margin-top:0.5rem"><button class="btn btn-secondary" style="padding:0.25rem 0.75rem;font-size:0.8rem" onclick="showToast('Reply sent (demo)')">Reply</button></div>
+                </div>
+                <div class="stat-card">
+                  <strong>Instagram DM</strong><br>
+                  <span style="font-size:0.9rem">Love the vintage blazer! Any more colors?</span>
+                  <div style="margin-top:0.5rem"><button class="btn btn-secondary" style="padding:0.25rem 0.75rem;font-size:0.8rem" onclick="showToast('Reply sent (demo)')">Reply</button></div>
+                </div>
+              </div>
+            `;
+          }
+        });
+      });
+    }
+
+    function updateOpenOrdersStat(orders = null) {
+      if (!orders) orders = window.__currentOrders || JSON.parse(localStorage.getItem('cia-orders') || '[]');
+      const open = orders.filter(o => !o.status.includes('Delivered')).length;
+      const openEl = document.querySelector('#dashboard-main .stat-card:nth-child(3) .value');
+      if (openEl) openEl.textContent = open || 0;
+    }
+
+    function renderProductsPanel(listings = null) {
+      const main = document.getElementById('dashboard-main');
+      if (!listings) listings = window.__currentListings || [];
       const maxListings = 50;
       const remaining = Math.max(0, maxListings - listings.length);
 
-      document.getElementById('stat-listings').textContent = listings.length;
-      document.getElementById('stat-remaining').textContent = remaining;
-      document.getElementById('listing-count-text').textContent =
-        `${listings.length} products · ${remaining} listings remaining on Starter plan`;
+      const user = (typeof getCurrentUser === 'function') ? getCurrentUser() : null;
+      const userGreeting = user ? ('Hi, ' + user.name.split(' ')[0] + ' — ') : '';
 
-      if (listings.length === 0) {
-        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:2rem;color:var(--gray-500)">
-          No products yet. <a href="consign.html">Consign your first item</a>
-        </td></tr>`;
+      // If we are not in full products mode, we can rebuild the products UI
+      // For simplicity on switch we rebuild the whole main content for products
+      main.innerHTML = `
+        <div style="display:flex;justify-content:space-between;align-items:flex-start;flex-wrap:wrap;gap:1rem">
+          <div>
+            <h1>Products</h1>
+            <p style="color:var(--gray-500)">${userGreeting}Manage your consigned inventory</p>
+          </div>
+          <a href="vendor-plans.html" class="btn btn-primary">Upgrade Your Plan</a>
+        </div>
+
+        <div class="dashboard-stats">
+          <div class="stat-card">
+            <div class="label">Active Listings</div>
+            <div class="value" id="stat-listings">${listings.length}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Listings Remaining</div>
+            <div class="value" id="stat-remaining">${remaining}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Open Orders</div>
+            <div class="value">${(JSON.parse(localStorage.getItem('cia-orders')||'[]').filter(o=>!o.status.includes('Delivered')).length)||0}</div>
+          </div>
+          <div class="stat-card">
+            <div class="label">Total Earnings</div>
+            <div class="value">$847</div>
+          </div>
+        </div>
+
+        <div style="display:flex;gap:1rem;margin-bottom:1.5rem;flex-wrap:wrap">
+          <input type="search" id="dash-search" placeholder="Search keywords" style="flex:1;min-width:200px;padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
+          <select id="dash-cat" style="padding:0.6rem 1rem;border:1px solid var(--gray-300);border-radius:8px">
+            <option value="">Any category</option>
+            ${CATEGORIES.map(c => `<option value="${c.id}">${c.name}</option>`).join('')}
+          </select>
+          <button class="btn btn-secondary" id="dash-search-btn">Search</button>
+        </div>
+
+        <p style="font-size:0.85rem;color:var(--gray-500);margin-bottom:1rem" id="listing-count-text">${listings.length} products · ${remaining} listings remaining on Starter plan</p>
+
+        <a href="consign.html" class="btn btn-primary" style="margin-bottom:1.5rem">Add Product</a>
+
+        <div style="overflow-x:auto">
+          <table class="data-table" id="products-table">
+            <thead>
+              <tr>
+                <th>Photo</th>
+                <th>Name</th>
+                <th>Category</th>
+                <th>Condition</th>
+                <th>SKU</th>
+                <th>Status</th>
+                <th>Actions</th>
+              </tr>
+            </thead>
+            <tbody id="products-tbody"></tbody>
+          </table>
+        </div>
+      `;
+
+      // now populate the table + wire filters
+      const tbody = document.getElementById('products-tbody');
+      const searchInput = document.getElementById('dash-search');
+      const catSelect = document.getElementById('dash-cat');
+      const searchBtn = document.getElementById('dash-search-btn');
+
+      function drawTable(filtered) {
+        if (filtered.length === 0) {
+          tbody.innerHTML = `<tr><td colspan="7" style="text-align:center;padding:2rem;color:var(--gray-500)">No products match. <a href="consign.html">Consign more items</a></td></tr>`;
+          return;
+        }
+        tbody.innerHTML = filtered.map((item, i) => {
+          const cats = item.categories.map(id => CATEGORIES.find(c => c.id === id)?.name || id).join(', ');
+          const thumb = (item.photos && item.photos[0])
+            ? `<img src="${item.photos[0]}" style="width:42px;height:42px;object-fit:cover;border-radius:6px;border:1px solid var(--gray-300);" alt="">`
+            : `<span style="font-size:1.4rem;opacity:0.6">${item.emoji || '📦'}</span>`;
+          return `<tr>
+            <td>${thumb}</td>
+            <td><strong>${item.name}</strong></td>
+            <td>${cats}</td>
+            <td><span class="condition-tag">${item.condition}</span></td>
+            <td style="font-family:monospace;font-size:0.85rem">${item.sku}</td>
+            <td>${item.available ? '<span style="color:var(--teal-600)">● Active</span>' : 'Draft'}</td>
+            <td class="table-actions">
+              <button title="Edit" onclick="showToast('Edit coming soon')">✏️</button>
+              <button title="Delete" onclick="deleteListing(${i})">🗑️</button>
+            </td>
+          </tr>`;
+        }).join('');
+      }
+
+      let activeListings = listings;
+      drawTable(activeListings);
+
+      function applyFilters() {
+        const q = (searchInput.value || '').toLowerCase().trim();
+        const cat = catSelect.value;
+        let res = listings;
+        if (q) res = res.filter(it => it.name.toLowerCase().includes(q) || (it.description||'').toLowerCase().includes(q));
+        if (cat) res = res.filter(it => it.categories && it.categories.includes(cat));
+        drawTable(res);
+      }
+
+      if (searchBtn) searchBtn.onclick = applyFilters;
+      if (searchInput) searchInput.oninput = applyFilters;
+      if (catSelect) catSelect.onchange = applyFilters;
+    }
+
+    function renderOrdersPanel(orders = null, forceShow = false) {
+      if (!orders) orders = window.__currentOrders || [];
+      const main = document.getElementById('dashboard-main');
+
+      if (!forceShow && currentPanel !== 'orders') return;
+
+      if (orders.length === 0) {
+        main.innerHTML = `
+          <h1>Orders</h1>
+          <p style="color:var(--gray-500)">No orders yet. When buyers purchase from your listings (demo via cart on Shop), they will appear here.</p>
+          <button class="btn btn-secondary" onclick="createSampleOrder()">Create sample order (demo)</button>
+        `;
         return;
       }
 
-      tbody.innerHTML = listings.map((item, i) => {
-        const cats = item.categories.map(id => CATEGORIES.find(c => c.id === id)?.name || id).join(', ');
-        return `<tr>
-          <td><strong>${item.name}</strong></td>
-          <td>${cats}</td>
-          <td><span class="condition-tag">${item.condition}</span></td>
-          <td style="font-family:monospace;font-size:0.85rem">${item.sku}</td>
-          <td>${item.available ? '<span style="color:var(--teal-600)">● Active</span>' : 'Draft'}</td>
-          <td class="table-actions">
-            <button title="Edit" onclick="showToast('Edit coming soon')">✏️</button>
-            <button title="Delete" onclick="deleteListing(${i})">🗑️</button>
-          </td>
-        </tr>`;
-      }).join('');
+      main.innerHTML = `
+        <h1>Orders</h1>
+        <p style="color:var(--gray-500);margin-bottom:1rem">Recent sales • Fulfill and mark shipped</p>
+        <div style="overflow-x:auto">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Order</th>
+                <th>Date</th>
+                <th>Items</th>
+                <th>Total</th>
+                <th>Status</th>
+                <th>Action</th>
+              </tr>
+            </thead>
+            <tbody>
+              ${orders.map((o, idx) => `
+                <tr>
+                  <td><strong>${o.id}</strong><br><small>${o.buyer ? o.buyer.name : ''}</small></td>
+                  <td>${new Date(o.date).toLocaleDateString()}</td>
+                  <td>${o.items.length} items<br><small>${o.items.map(it=>it.name).join(', ')}</small></td>
+                  <td><strong>$${o.total.toFixed(2)}</strong></td>
+                  <td><span style="color:var(--teal-700)">${o.status}</span></td>
+                  <td class="table-actions">
+                    <button onclick="markOrderShipped(${idx})">Ship</button>
+                    <button onclick="markOrderDelivered(${idx})">Delivered</button>
+                  </td>
+                </tr>
+              `).join('')}
+            </tbody>
+          </table>
+        </div>
+        <div style="margin-top:1rem">
+          <button class="btn btn-secondary" onclick="createSampleOrder()">+ Add demo order</button>
+        </div>
+      `;
     }
 
-    function deleteListing(index) {
-      const listings = JSON.parse(localStorage.getItem('cia-listings') || '[]');
+    async function createSampleOrder() {
+      const sample = {
+        id: 'ORD-' + Date.now().toString(36).toUpperCase().slice(-6),
+        date: new Date().toISOString(),
+        items: [{name: 'Sample Vintage Leather Blazer', price: 89}],
+        total: 89,
+        status: 'Paid - Awaiting shipment',
+        buyer: { name: 'Alex Rivera', address: '123 Main St, Springfield, MO' }
+      };
+      if (window.saveOrder) {
+        await window.saveOrder(sample);
+      } else {
+        const orders = JSON.parse(localStorage.getItem('cia-orders') || '[]');
+        orders.unshift(sample);
+        localStorage.setItem('cia-orders', JSON.stringify(orders));
+      }
+      await renderDashboard();
+      showToast('Sample order added');
+    }
+
+    async function markOrderShipped(index) {
+      let orders = window.__currentOrders || [];
+      if (orders[index]) {
+        orders[index].status = 'Shipped - In transit';
+        // For demo we persist to local; extend Worker for full update later
+        localStorage.setItem('cia-orders', JSON.stringify(orders));
+        window.__currentOrders = orders;
+      }
+      await renderDashboard();
+      showToast('Marked as shipped');
+    }
+
+    async function markOrderDelivered(index) {
+      let orders = window.__currentOrders || [];
+      if (orders[index]) {
+        orders[index].status = 'Delivered';
+        localStorage.setItem('cia-orders', JSON.stringify(orders));
+        window.__currentOrders = orders;
+      }
+      await renderDashboard();
+      showToast('Marked delivered. Earnings updated (demo).');
+    }
+
+    async function deleteListing(index) {
+      let listings = window.__currentListings || [];
       listings.splice(index, 1);
       localStorage.setItem('cia-listings', JSON.stringify(listings));
-      renderDashboard();
+      window.__currentListings = listings;
+      await renderDashboard();
       showToast('Product removed');
     }
 
-    document.addEventListener('DOMContentLoaded', renderDashboard);
+    async function bootstrapDashboard() {
+      // Ensure API wrappers are available (main.js loads first)
+      if (typeof window.loadListings !== 'function') {
+        // fallback if timing issue
+        window.loadListings = async () => JSON.parse(localStorage.getItem('cia-listings') || '[]');
+        window.loadOrders = async () => JSON.parse(localStorage.getItem('cia-orders') || '[]');
+      }
+      await renderDashboard();
+    }
+    document.addEventListener('DOMContentLoaded', bootstrapDashboard);
   </script>
 </body>
 </html>

@@ -1,0 +1,16 @@
+name = "consignitaway-api"
+main = "worker/index.js"
+compatibility_date = "2025-06-01"
+
+# After running: wrangler kv:namespace create "CONSIGNED_DATA"
+# Paste the id here (production) and preview if needed.
+[[kv_namespaces]]
+binding = "CONSIGNED_DATA"
+id = "YOUR_KV_NAMESPACE_ID_HERE"   # <-- REPLACE after `wrangler kv:namespace create "CONSIGNED_DATA"`
+
+[vars]
+ENVIRONMENT = "production"
+
+# For local dev with wrangler dev:
+# wrangler dev --config wrangler-worker.toml --local
+# (local KV is emulated)

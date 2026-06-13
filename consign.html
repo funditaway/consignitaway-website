@@ -70,11 +70,16 @@
 
         <div class="form-group">
           <label>Photos</label>
-          <div style="border:2px dashed var(--gray-300);border-radius:var(--radius-md);padding:2.5rem;text-align:center;color:var(--gray-500)">
-            <p style="font-size:2rem;margin-bottom:0.5rem">📷</p>
-            <p>Drag & drop images here, or <strong style="color:var(--teal-600)">browse files</strong></p>
-            <p style="font-size:0.8rem;margin-top:0.5rem">Up to 8 images · JPG, PNG · Max 5MB each</p>
+          <div id="photo-dropzone" class="photo-dropzone">
+            <input type="file" id="photo-input" accept="image/*" multiple hidden>
+            <div class="dropzone-inner">
+              <p style="font-size:2rem;margin-bottom:0.25rem">📷</p>
+              <p><strong>Drag &amp; drop images</strong> or <span style="color:var(--teal-600);cursor:pointer;text-decoration:underline" onclick="document.getElementById('photo-input').click()">browse</span></p>
+              <p style="font-size:0.75rem;margin-top:0.25rem;color:var(--gray-500)">Up to 8 images • JPG/PNG • 5MB max each</p>
+            </div>
           </div>
+          <div id="photo-previews" class="photo-previews"></div>
+          <small style="color:var(--gray-500)">Photos are stored locally in your browser for this demo (data URLs).</small>
         </div>
 
         <div style="display:flex;gap:1rem;flex-wrap:wrap;margin-top:2rem">
