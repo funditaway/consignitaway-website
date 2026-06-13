@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Log in or create an account at Consign It Away to manage your listings and orders.">
+  <title>Login or Sign Up | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="max-width:420px;padding:3rem 0">
+    <div style="text-align:center;margin-bottom:2rem">
+      <div class="logo" style="justify-content:center;margin-bottom:0.5rem">
+        <div class="logo-icon">↑</div>
+        <span>consign <span style="color:var(--orange-400)">it</span> away</span>
+      </div>
+      <p style="color:var(--gray-600)">Welcome back or join the Springfield consignment community.</p>
+    </div>
+
+    <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1.75rem">
+      <!-- Tabs -->
+      <div style="display:flex;border-bottom:1px solid var(--gray-200);margin-bottom:1.25rem">
+        <button id="tab-login" onclick="switchTab('login')" class="tab-btn active" style="flex:1;padding:0.6rem;border:none;background:none;font-weight:600;border-bottom:3px solid var(--teal-600)">Log In</button>
+        <button id="tab-signup" onclick="switchTab('signup')" class="tab-btn" style="flex:1;padding:0.6rem;border:none;background:none;font-weight:600">Sign Up</button>
+      </div>
+
+      <!-- Login Form -->
+      <form id="login-form" onsubmit="handleLogin(event)">
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" required placeholder="you@example.com" value="alex@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" required placeholder="••••••••" value="demo123">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Log In</button>
+        <p style="text-align:center;font-size:0.8rem;margin-top:0.75rem;color:var(--gray-500)">
+          Demo: Use any email + password "demo123"
+        </p>
+      </form>
+
+      <!-- Signup Form -->
+      <form id="signup-form" onsubmit="handleSignup(event)" style="display:none">
+        <div class="form-row">
+          <div class="form-group">
+            <label>First Name</label>
+            <input type="text" name="firstName" required value="Alex">
+          </div>
+          <div class="form-group">
+            <label>Last Name</label>
+            <input type="text" name="lastName" required value="Rivera">
+          </div>
+        </div>
+        <div class="form-group">
+          <label>Email</label>
+          <input type="email" name="email" required placeholder="you@example.com" value="alex@example.com">
+        </div>
+        <div class="form-group">
+          <label>Password</label>
+          <input type="password" name="password" required placeholder="Create a password" value="demo123">
+        </div>
+        <div class="form-group">
+          <label>Confirm Password</label>
+          <input type="password" name="confirmPassword" required placeholder="Confirm password" value="demo123">
+        </div>
+        <button type="submit" class="btn btn-primary" style="width:100%;margin-top:0.5rem">Create Account</button>
+        <p style="text-align:center;font-size:0.8rem;margin-top:0.75rem;color:var(--gray-500)">
+          By signing up you agree to our Terms &amp; Privacy.
+        </p>
+      </form>
+    </div>
+
+    <p style="text-align:center;margin-top:1.5rem;font-size:0.9rem">
+      Need help? <a href="contact.html">Contact support</a>
+    </p>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function switchTab(tab) {
+      const loginForm = document.getElementById('login-form');
+      const signupForm = document.getElementById('signup-form');
+      const tabLogin = document.getElementById('tab-login');
+      const tabSignup = document.getElementById('tab-signup');
+
+      if (tab === 'login') {
+        loginForm.style.display = 'block';
+        signupForm.style.display = 'none';
+        tabLogin.classList.add('active');
+        tabSignup.classList.remove('active');
+        tabLogin.style.borderBottom = '3px solid var(--teal-600)';
+        tabSignup.style.borderBottom = 'none';
+      } else {
+        loginForm.style.display = 'none';
+        signupForm.style.display = 'block';
+        tabLogin.classList.remove('active');
+        tabSignup.classList.add('active');
+        tabLogin.style.borderBottom = 'none';
+        tabSignup.style.borderBottom = '3px solid var(--teal-600)';
+      }
+    }
+
+    function handleLogin(e) {
+      e.preventDefault();
+      const form = e.target;
+      const email = form.email.value.trim();
+      const password = form.password.value;
+
+      // Demo auth - any email works with "demo123"
+      if (password !== 'demo123') {
+        alert('Demo only: Use password "demo123"');
+        return;
+      }
+
+      const name = email.split('@')[0].replace(/[^a-zA-Z ]/g, ' ').trim() || 'Consignor';
+      const user = {
+        name: name.charAt(0).toUpperCase() + name.slice(1),
+        email: email,
+        plan: 'starter',
+        sellerId: 'seller-' + Date.now().toString(36).slice(-6)
+      };
+
+      localStorage.setItem('cia-user', JSON.stringify(user));
+      showToast('Logged in successfully!');
+      setTimeout(() => window.location.href = 'dashboard.html', 600);
+    }
+
+    function handleSignup(e) {
+      e.preventDefault();
+      const form = e.target;
+      const password = form.password.value;
+      const confirm = form.confirmPassword.value;
+
+      if (password !== confirm) {
+        alert('Passwords do not match');
+        return;
+      }
+
+      const email = form.email.value.trim();
+      const first = form.firstName.value.trim();
+      const last = form.lastName.value.trim();
+      const name = `${first} ${last}`.trim() || email.split('@')[0];
+
+      const user = {
+        name,
+        email,
+        plan: 'starter',
+        sellerId: 'seller-' + Date.now().toString(36).slice(-6)
+      };
+
+      localStorage.setItem('cia-user', JSON.stringify(user));
+      showToast('Account created! Welcome.');
+      setTimeout(() => window.location.href = 'dashboard.html', 600);
+    }
+
+    // Default to login tab
+    document.addEventListener('DOMContentLoaded', () => {
+      const tabLogin = document.getElementById('tab-login');
+      if (tabLogin) tabLogin.style.borderBottom = '3px solid var(--teal-600)';
+    });
+  </script>
+</body>
+</html>

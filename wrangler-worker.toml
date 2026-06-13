@@ -3,14 +3,16 @@ main = "worker/index.js"
 compatibility_date = "2025-06-01"
 
 # After running: wrangler kv:namespace create "CONSIGNED_DATA"
-# Paste the id here (production) and preview if needed.
+# Paste the id here.
 [[kv_namespaces]]
 binding = "CONSIGNED_DATA"
-id = "YOUR_KV_NAMESPACE_ID_HERE"   # <-- REPLACE after `wrangler kv:namespace create "CONSIGNED_DATA"`
+id = "YOUR_KV_NAMESPACE_ID_HERE"
 
 [vars]
 ENVIRONMENT = "production"
 
-# For local dev with wrangler dev:
-# wrangler dev --config wrangler-worker.toml --local
-# (local KV is emulated)
+# IMPORTANT: Set your Square access token (sandbox or prod)
+# wrangler secret put SQUARE_ACCESS_TOKEN --config wrangler-worker.toml
+# Then use it in the Worker for real charging.
+
+# Local: wrangler dev --config wrangler-worker.toml --local

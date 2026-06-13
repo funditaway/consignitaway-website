@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Daily Deals | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+  <div class="page-header">
+    <div class="container">
+      <p class="breadcrumb"><a href="index.html">Home</a> / Daily Deals</p>
+      <h1>Daily Deals</h1>
+      <p>Hand-picked consigned bargains</p>
+    </div>
+  </div>
+  <section class="section">
+    <div class="container">
+      <div class="product-grid" id="deals-grid"></div>
+    </div>
+  </section>
+  <footer id="site-footer"></footer>
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    document.addEventListener('DOMContentLoaded', () => {
+      const deals = [...PRODUCTS].sort((a,b) => a.price - b.price).slice(0, 8);
+      document.getElementById('deals-grid').innerHTML = deals.map(p => {
+        const orig = renderProductCard(p);
+        return orig.replace('<div class="product-image">', '<div class="product-image"><span class="product-badge" style="background:var(--orange-500)">Deal</span>');
+      }).join('');
+    });
+  </script>
+</body>
+</html>

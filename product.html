@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View detailed product information, condition, photos, and buy or consign similar items at Consign It Away.">
+  <title>Product Details | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <nav style="margin-bottom:1rem;font-size:0.9rem">
+      <a href="index.html">Home</a> / 
+      <a href="shop.html">Shop</a> / 
+      <span id="breadcrumb-category"></span> / 
+      <span id="breadcrumb-name"></span>
+    </nav>
+
+    <div id="product-detail" class="product-detail-grid" style="display:grid;grid-template-columns:1fr 1fr;gap:3rem">
+      <!-- Populated by JS -->
+    </div>
+
+    <div style="margin-top:3rem">
+      <h2 style="margin-bottom:1rem">Why Buy From Consign It Away?</h2>
+      <div class="steps-grid">
+        <div class="step-card">
+          <div class="step-number">✓</div>
+          <h3>Verified Condition</h3>
+          <p>Every item is inspected and rated using our trusted CIA Condition system.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">🚚</div>
+          <h3>Easy Shipping</h3>
+          <p>Free shipping on many items. We handle fulfillment on your behalf when selling.</p>
+        </div>
+        <div class="step-card">
+          <div class="step-number">🔄</div>
+          <h3>Multi-Platform Exposure</h3>
+          <p>Items are listed across eBay, Amazon, our store, and more by our AI.</p>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:3rem">
+      <h2 style="margin-bottom:1rem">Similar Items</h2>
+      <div class="product-grid" id="similar-products"></div>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function getProductIdFromUrl() {
+      const params = new URLSearchParams(window.location.search);
+      return parseInt(params.get('id'));
+    }
+
+    function renderProductDetail() {
+      const id = getProductIdFromUrl();
+      if (!id) {
+        document.getElementById('product-detail').innerHTML = '<p>Product not found. <a href="shop.html">Browse all items</a></p>';
+        return;
+      }
+
+      let product = (window.PRODUCTS || PRODUCTS).find(p => p.id === id);
+      if (!product && window.__currentListings) {
+        product = window.__currentListings.find(p => p.id == id || p.sku == id);
+      }
+
+      if (!product) {
+        document.getElementById('product-detail').innerHTML = '<p>Product not found. <a href="shop.html">Browse all items</a></p>';
+        return;
+      }
+
+      const container = document.getElementById('product-detail');
+      const images = product.photos && product.photos.length > 0 
+        ? product.photos 
+        : (product.image ? [product.image] : []);
+
+      const mainImage = images[0] || '';
+      const thumbsHtml = images.length > 1 
+        ? images.map((img, i) => `
+            <img src="${img}" alt="Thumbnail ${i+1}" 
+                 style="width:70px;height:70px;object-fit:cover;border-radius:6px;cursor:pointer;border:2px solid ${i===0 ? 'var(--teal-600)' : 'transparent'}"
+                 onclick="document.getElementById('main-product-image').src='${img}'; this.parentNode.querySelectorAll('img').forEach((im,ii) => im.style.borderColor = ii===${i} ? 'var(--teal-600)' : 'transparent')">
+          `).join('')
+        : '';
+
+      const category = (window.CATEGORIES || CATEGORIES).find(c => c.id === product.category);
+      const catName = category ? category.name : (product.categories ? product.categories.join(', ') : '');
+
+      container.innerHTML = `
+        <div>
+          <div style="position:relative">
+            <img id="main-product-image" src="${mainImage}" alt="${product.name}" 
+                 style="width:100%;max-height:520px;object-fit:contain;background:#f8f9fa;border-radius:12px;padding:20px">
+            ${product.shipping ? '<span class="product-badge shipping" style="position:absolute;top:12px;left:12px">Free Shipping</span>' : ''}
+          </div>
+          <div style="display:flex;gap:0.75rem;margin-top:1rem;flex-wrap:wrap">
+            ${thumbsHtml}
+          </div>
+        </div>
+
+        <div>
+          <div style="display:flex;gap:0.5rem;align-items:center;margin-bottom:0.5rem">
+            <span class="condition-tag" style="font-size:0.9rem">${product.condition}</span>
+            ${catName ? `<span style="font-size:0.85rem;color:var(--gray-500)">${catName}</span>` : ''}
+          </div>
+
+          <h1 style="font-size:1.85rem;margin-bottom:0.25rem">${product.name}</h1>
+          <div style="font-size:1.65rem;font-weight:700;color:var(--teal-700);margin-bottom:1rem">
+            ${formatPrice ? formatPrice(product.price) : '$' + product.price}
+          </div>
+
+          <div style="margin-bottom:1.5rem">
+            <p style="line-height:1.6;color:var(--gray-700)">
+              ${product.fullDescription || product.description || 'High-quality consigned item. Our team has inspected and rated this item using our trusted CIA Condition system.'}
+            </p>
+          </div>
+
+          <div style="display:flex;gap:0.75rem;margin-bottom:1.5rem;flex-wrap:wrap">
+            <button class="btn btn-primary btn-lg" style="flex:1;min-width:180px" onclick="addToCart(${product.id}); showToast('Added to cart!')">
+              Add to Cart
+            </button>
+            <button class="btn btn-outline btn-lg" style="flex:1;min-width:180px" onclick="window.location.href='consign.html?cat=${product.category || ''}'">
+              Consign Similar Item
+            </button>
+          </div>
+
+          <div style="font-size:0.85rem;color:var(--gray-500);line-height:1.5">
+            <p>✓ Inspected and rated by Consign It Away</p>
+            <p>✓ Listed on multiple platforms by our AI (eBay, Amazon, our store + more)</p>
+            <p>✓ 30-day buyer protection on most items</p>
+          </div>
+        </div>
+      `;
+
+      // Breadcrumbs
+      document.getElementById('breadcrumb-category').innerHTML = `<a href="shop.html?cat=${product.category}">${catName || 'Category'}</a>`;
+      document.getElementById('breadcrumb-name').textContent = product.name;
+
+      // Similar products
+      renderSimilarProducts(product);
+    }
+
+    function renderSimilarProducts(currentProduct) {
+      const container = document.getElementById('similar-products');
+      if (!container) return;
+
+      let products = (window.PRODUCTS || PRODUCTS || []).filter(p => 
+        p.id !== currentProduct.id && 
+        (p.category === currentProduct.category || Math.random() > 0.6)
+      ).slice(0, 4);
+
+      if (products.length === 0) {
+        products = (window.PRODUCTS || PRODUCTS || []).filter(p => p.id !== currentProduct.id).slice(0, 4);
+      }
+
+      container.innerHTML = products.map(p => `
+        <article class="product-card" onclick="window.location.href='product.html?id=${p.id}'">
+          <div class="product-image">
+            ${p.shipping ? '<span class="product-badge shipping">Free Shipping</span>' : ''}
+            ${p.image ? `<img src="${p.image}" alt="${p.name}" style="width:100%;height:100%;object-fit:contain;padding:12px">` : `<span>${p.emoji}</span>`}
+          </div>
+          <div class="product-info">
+            <h3>${p.name}</h3>
+            <div class="product-meta">
+              <span class="product-price">${formatPrice ? formatPrice(p.price) : '$' + p.price}</span>
+              <span class="condition-tag">${p.condition}</span>
+            </div>
+            <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;font-size:0.85rem;padding:0.5rem" 
+                    onclick="event.stopImmediatePropagation(); addToCart(${p.id}); showToast('Added to cart!')">
+              Add to Cart
+            </button>
+          </div>
+        </article>
+      `).join('');
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderProductDetail();
+    });
+  </script>
+</body>
+</html>

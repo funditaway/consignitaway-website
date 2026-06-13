@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="View your earnings and request payouts at Consign It Away.">
+  <title>Payouts &amp; Earnings | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>Payouts &amp; Earnings</h1>
+    <p style="color:var(--gray-600);margin-bottom:1.5rem">Money you've earned from sold items across all platforms.</p>
+
+    <div class="dashboard-stats" style="margin-bottom:2rem">
+      <div class="stat-card">
+        <div class="label">Total Earnings</div>
+        <div class="value" id="total-earnings">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pending Payout</div>
+        <div class="value" id="pending-payout">$0</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Items Sold</div>
+        <div class="value" id="items-sold">0</div>
+      </div>
+    </div>
+
+    <h2 style="margin-bottom:1rem">Payout History</h2>
+    <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;overflow:hidden">
+      <table class="data-table" id="payouts-table">
+        <thead>
+          <tr>
+            <th>Date</th>
+            <th>Amount</th>
+            <th>Method</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="payouts-tbody">
+          <!-- Populated by JS -->
+        </tbody>
+      </table>
+    </div>
+
+    <div style="margin-top:2rem">
+      <button onclick="requestPayout()" class="btn btn-primary">Request Payout</button>
+      <span style="margin-left:1rem;font-size:0.85rem;color:var(--gray-600)">Payouts are processed within 5 business days to your linked account.</span>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function loadEarnings() {
+      const orders = JSON.parse(localStorage.getItem('cia-orders') || '[]');
+      const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
+      const sellerId = user.sellerId;
+
+      // Filter orders that belong to this seller (demo: all for simplicity, or match by sellerId if present)
+      const myOrders = orders.filter(o => !o.sellerId || o.sellerId === sellerId);
+
+      let total = 0;
+      let soldCount = 0;
+
+      myOrders.forEach(o => {
+        if (o.status && (o.status.includes('Delivered') || o.status.includes('Shipped'))) {
+          total += o.total || 0;
+          soldCount += (o.items ? o.items.length : 1);
+        }
+      });
+
+      document.getElementById('total-earnings').textContent = '$' + total.toFixed(2);
+      document.getElementById('pending-payout').textContent = '$' + (total * 0.8).toFixed(2); // demo: 80% after fees
+      document.getElementById('items-sold').textContent = soldCount;
+
+      // Simple payout history (demo data + real delivered orders)
+      const tbody = document.getElementById('payouts-tbody');
+      let html = '';
+
+      // Demo past payouts
+      html += `
+        <tr><td>2026-05-15</td><td>$124.00</td><td>Bank Transfer</td><td style="color:var(--teal-600)">Paid</td></tr>
+        <tr><td>2026-04-28</td><td>$67.50</td><td>Square</td><td style="color:var(--teal-600)">Paid</td></tr>
+      `;
+
+      // Add from recent delivered orders as "pending"
+      const recentDelivered = myOrders.filter(o => o.status && o.status.includes('Delivered')).slice(0, 2);
+      recentDelivered.forEach(o => {
+        html += `<tr><td>${new Date(o.date).toLocaleDateString()}</td><td>$${(o.total||0).toFixed(2)}</td><td>Pending</td><td style="color:var(--orange-500)">Processing</td></tr>`;
+      });
+
+      tbody.innerHTML = html || '<tr><td colspan="4" style="text-align:center;color:var(--gray-500)">No payouts yet</td></tr>';
+    }
+
+    function requestPayout() {
+      const pending = parseFloat(document.getElementById('pending-payout').textContent.replace('$','')) || 0;
+      if (pending < 20) {
+        alert('Minimum payout is $20.');
+        return;
+      }
+      alert('Payout request submitted! You will receive funds within 5 business days.');
+      // In real app: call backend API
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadEarnings();
+    });
+  </script>
+</body>
+</html>

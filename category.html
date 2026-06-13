@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Category | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <p class="breadcrumb" id="breadcrumb"><a href="index.html">Home</a> / <a href="shop.html">Shop</a></p>
+      <h1 id="cat-title">Category</h1>
+      <p id="cat-desc">Browse consigned items in this category</p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:1rem;margin-bottom:2rem">
+        <a href="#" id="consign-btn" class="btn btn-primary">Consign an item in this category</a>
+        <select id="sort-select" style="padding:0.5rem;border-radius:8px;border:1px solid var(--gray-300)">
+          <option value="newest">Newest first</option>
+          <option value="price-low">Price: Low to High</option>
+          <option value="price-high">Price: High to Low</option>
+        </select>
+      </div>
+
+      <div class="product-grid" id="product-grid"></div>
+
+      <div id="empty-state" style="display:none;text-align:center;padding:3rem;color:var(--gray-500)">
+        <p style="font-size:2.5rem;margin-bottom:1rem">📦</p>
+        <h3>No products in this category yet</h3>
+        <p>Be the first to consign an item here.</p>
+        <a href="#" id="empty-consign" class="btn btn-primary" style="margin-top:1.5rem">Consign an Item</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="section" style="background:var(--gray-100)">
+    <div class="container">
+      <h2 style="margin-bottom:1rem">View New Products in the Catalog</h2>
+      <div class="product-grid" id="catalog-grid"></div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    const catId = new URLSearchParams(location.search).get('cat') || 'all';
+    const cat = CATEGORIES.find(c => c.id === catId);
+
+    function render() {
+      const title = cat ? cat.name : 'All Categories';
+      document.title = title + ' | Consign It Away';
+      document.getElementById('cat-title').textContent = title;
+      document.getElementById('breadcrumb').innerHTML =
+        `<a href="index.html">Home</a> / <a href="shop.html">Shop</a> / ${title}`;
+
+      const consignUrl = `consign.html?cat=${catId}`;
+      document.getElementById('consign-btn').href = consignUrl;
+      document.getElementById('empty-consign').href = consignUrl;
+
+      let items = getProductsByCategory(catId);
+      const sort = document.getElementById('sort-select').value;
+      if (sort === 'price-low') items.sort((a, b) => a.price - b.price);
+      else if (sort === 'price-high') items.sort((a, b) => b.price - a.price);
+      else items.sort((a, b) => b.id - a.id);
+
+      const grid = document.getElementById('product-grid');
+      const empty = document.getElementById('empty-state');
+      if (items.length === 0) {
+        grid.style.display = 'none';
+        empty.style.display = 'block';
+      } else {
+        grid.style.display = 'grid';
+        empty.style.display = 'none';
+        grid.innerHTML = items.map(renderProductCard).join('');
+      }
+
+      const catalog = document.getElementById('catalog-grid');
+      catalog.innerHTML = PRODUCTS.slice(0, 4).map(renderProductCard).join('');
+    }
+
+    document.getElementById('sort-select').addEventListener('change', render);
+    document.addEventListener('DOMContentLoaded', render);
+  </script>
+</body>
+</html>

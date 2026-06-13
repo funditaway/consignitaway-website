@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Review your cart at Consign It Away. Secure checkout with Square integration.">
+  <title>Your Cart | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>Your Cart</h1>
+    <p style="color:var(--gray-500);margin-bottom:2rem">Items you've selected from our consigned collection.</p>
+
+    <div id="cart-content">
+      <!-- Populated by JS -->
+    </div>
+
+    <div style="margin-top:2rem;text-align:right">
+      <a href="shop.html" class="btn btn-outline">Continue Shopping</a>
+      <button onclick="proceedToCheckout()" class="btn btn-primary btn-lg" style="margin-left:1rem" id="checkout-btn">
+        Proceed to Checkout
+      </button>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let cart = JSON.parse(localStorage.getItem('cia-cart') || '[]');
+
+    function renderCart() {
+      const container = document.getElementById('cart-content');
+      const checkoutBtn = document.getElementById('checkout-btn');
+
+      if (cart.length === 0) {
+        container.innerHTML = `
+          <div style="text-align:center;padding:3rem;background:var(--gray-100);border-radius:12px">
+            <p style="font-size:3rem;margin-bottom:1rem">🛒</p>
+            <h3>Your cart is empty</h3>
+            <p style="color:var(--gray-500)">Start shopping our consigned items.</p>
+            <a href="shop.html" class="btn btn-primary" style="margin-top:1rem">Browse Items</a>
+          </div>
+        `;
+        if (checkoutBtn) checkoutBtn.style.display = 'none';
+        return;
+      }
+
+      let html = `<div style="display:grid;gap:1rem">`;
+      let total = 0;
+
+      cart.forEach((item, index) => {
+        const price = item.price || 0;
+        total += price;
+        const img = item.image || (item.photos && item.photos[0]) || '';
+        const imgHtml = img 
+          ? `<img src="${img}" alt="${item.name}" style="width:90px;height:90px;object-fit:contain;background:#f8f9fa;border-radius:8px">` 
+          : `<div style="width:90px;height:90px;background:#f8f9fa;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:2rem">${item.emoji || '📦'}</div>`;
+
+        html += `
+          <div style="display:flex;gap:1rem;align-items:center;background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1rem">
+            <div>${imgHtml}</div>
+            <div style="flex:1">
+              <strong>${item.name}</strong><br>
+              <span style="color:var(--gray-500);font-size:0.9rem">${item.condition || ''}</span>
+              <div style="margin-top:0.5rem;font-size:1.1rem;font-weight:700;color:var(--teal-700)">
+                $${price.toFixed(2)}
+              </div>
+            </div>
+            <div style="text-align:right">
+              <button onclick="removeFromCart(${index})" style="background:none;border:none;color:#c00;font-size:1.2rem;cursor:pointer" title="Remove">×</button>
+            </div>
+          </div>
+        `;
+      });
+
+      html += `</div>`;
+
+      html += `
+        <div style="margin-top:1.5rem;padding:1.25rem;background:white;border:1px solid var(--gray-300);border-radius:12px">
+          <div style="display:flex;justify-content:space-between;font-size:1.1rem">
+            <div><strong>Subtotal</strong></div>
+            <div><strong>$${total.toFixed(2)}</strong></div>
+          </div>
+          <div style="font-size:0.85rem;color:var(--gray-500);margin-top:0.25rem">
+            Shipping calculated at checkout. Many items include free shipping.
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      if (checkoutBtn) checkoutBtn.style.display = 'inline-flex';
+    }
+
+    function removeFromCart(index) {
+      cart.splice(index, 1);
+      localStorage.setItem('cia-cart', JSON.stringify(cart));
+      // Update global cart if main.js is loaded
+      if (window.cart) window.cart = cart;
+      if (typeof updateCartBadge === 'function') updateCartBadge();
+      renderCart();
+    }
+
+    function proceedToCheckout() {
+      if (cart.length === 0) return;
+      window.location.href = 'checkout.html';
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderCart();
+    });
+  </script>
+</body>
+</html>

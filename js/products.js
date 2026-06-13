@@ -45,7 +45,7 @@ function renderProductCard(product) {
     ? `<img src="${product.image}" alt="${product.name}" loading="lazy">` 
     : `<span>${product.emoji}</span>`;
   return `
-    <article class="product-card" data-id="${product.id}" onclick="showProductModal(${product.id}, event)">
+    <a href="product.html?id=${product.id}" class="product-card" style="text-decoration:none;color:inherit" data-id="${product.id}">
       <div class="product-image">
         ${product.shipping ? '<span class="product-badge shipping">Free Shipping</span>' : ''}
         ${imgHtml}
@@ -56,13 +56,13 @@ function renderProductCard(product) {
           <span class="product-price">${formatPrice(product.price)}</span>
           <span class="condition-tag">${product.condition}</span>
         </div>
-        <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;font-size:0.85rem;padding:0.5rem" onclick="event.stopImmediatePropagation(); addToCart(${product.id})">Add to Cart</button>
+        <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;font-size:0.85rem;padding:0.5rem" onclick="event.preventDefault(); addToCart(${product.id}); showToast('Added to cart!')">Add to Cart</button>
       </div>
-    </article>
+    </a>
   `;
 }
 
-function renderCategoryCards(container, linkPrefix = 'shop.html?cat=') {
+function renderCategoryCards(container, linkPrefix = 'category.html?cat=') {
   if (!container) return;
   container.innerHTML = CATEGORIES.map(cat => `
     <a href="${linkPrefix}${cat.id}" class="category-card">

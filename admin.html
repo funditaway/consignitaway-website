@@ -1,0 +1,74 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Internal admin dashboard for Consign It Away staff.">
+  <title>Admin | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>Staff Admin Dashboard</h1>
+    <p style="color:var(--gray-600)">Internal tools — protected in production.</p>
+
+    <div class="dashboard-stats" style="margin:2rem 0">
+      <div class="stat-card">
+        <div class="label">Total Active Consignments</div>
+        <div class="value">127</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Pending Review</div>
+        <div class="value">14</div>
+      </div>
+      <div class="stat-card">
+        <div class="label">Items Published Today</div>
+        <div class="value">38</div>
+      </div>
+    </div>
+
+    <h2>Recent Consignments</h2>
+    <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;overflow:hidden">
+      <table class="data-table">
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Item</th>
+            <th>Seller</th>
+            <th>Platforms</th>
+            <th>Status</th>
+            <th>Actions</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr>
+            <td>L-9f2k1</td>
+            <td>Vintage Leather Blazer</td>
+            <td>alex@example.com</td>
+            <td>eBay, Store</td>
+            <td><span style="color:var(--teal-600)">Live</span></td>
+            <td><button class="btn btn-secondary" style="padding:0.2rem 0.6rem;font-size:0.8rem">Review</button></td>
+          </tr>
+          <tr>
+            <td>L-8j3m4</td>
+            <td>Bluetooth Speaker</td>
+            <td>jordan@demo.com</td>
+            <td>Amazon, eBay</td>
+            <td><span style="color:var(--orange-500)">Pending AI Review</span></td>
+            <td><button class="btn btn-secondary" style="padding:0.2rem 0.6rem;font-size:0.8rem">Approve</button></td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
+
+    <p style="margin-top:2rem;font-size:0.85rem;color:var(--gray-500)">This is a demo admin view. In production, add proper authentication and connect to the full Worker API for all sellers.</p>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+</body>
+</html>

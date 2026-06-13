@@ -1,0 +1,280 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Complete your purchase securely at Consign It Away. Fast checkout with Square.">
+  <title>Checkout | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>Checkout</h1>
+
+    <div style="display:grid;grid-template-columns:1fr 380px;gap:2rem;margin-top:1.5rem">
+      <!-- Shipping Form -->
+      <div>
+        <h2 style="margin-bottom:1rem">Shipping Information</h2>
+        <form id="checkout-form" onsubmit="handleCheckout(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name <span class="required">*</span></label>
+              <input type="text" name="firstName" required value="Alex">
+            </div>
+            <div class="form-group">
+              <label>Last Name <span class="required">*</span></label>
+              <input type="text" name="lastName" required value="Rivera">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Email <span class="required">*</span></label>
+            <input type="email" name="email" required value="alex@example.com">
+          </div>
+
+          <div class="form-group">
+            <label>Address <span class="required">*</span></label>
+            <input type="text" name="address" required value="123 Main St">
+          </div>
+
+          <div class="form-row">
+            <div class="form-group">
+              <label>City <span class="required">*</span></label>
+              <input type="text" name="city" required value="Springfield">
+            </div>
+            <div class="form-group">
+              <label>State <span class="required">*</span></label>
+              <input type="text" name="state" required value="MO">
+            </div>
+            <div class="form-group">
+              <label>ZIP <span class="required">*</span></label>
+              <input type="text" name="zip" required value="65804">
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" name="phone" value="(417) 555-0123">
+          </div>
+
+          <h2 style="margin:2rem 0 1rem">Payment</h2>
+          <div style="margin-bottom:1rem">
+            <div style="display:flex;gap:1rem;align-items:center;margin-bottom:0.75rem">
+              <input type="radio" id="pay-square" name="payment" value="square" checked>
+              <label for="pay-square" style="margin:0"><strong>Pay with Square</strong> (secure card processing)</label>
+            </div>
+            <div style="display:flex;gap:1rem;align-items:center">
+              <input type="radio" id="pay-demo" name="payment" value="demo">
+              <label for="pay-demo" style="margin:0">Demo / Cash on Pickup (Springfield area)</label>
+            </div>
+          </div>
+
+          <div id="square-container" style="margin-bottom:1rem">
+            <!-- Square card form will be injected here via JS if selected -->
+            <div style="border:1px solid var(--gray-300);border-radius:8px;padding:1rem;background:#fafafa">
+              <p style="font-size:0.85rem;color:var(--gray-600);margin-bottom:0.5rem">Card details (demo mode - use test card 4111 1111 1111 1111)</p>
+              <div id="card-element" style="min-height:60px"></div>
+            </div>
+          </div>
+
+          <button type="submit" class="btn btn-primary btn-lg" style="width:100%;margin-top:1rem" id="place-order-btn">
+            Place Order • <span id="checkout-total"></span>
+          </button>
+          <p style="font-size:0.75rem;color:var(--gray-500);text-align:center;margin-top:0.5rem">
+            Your information is secure. We never store full card details.
+          </p>
+        </form>
+      </div>
+
+      <!-- Order Summary -->
+      <div>
+        <h2 style="margin-bottom:1rem">Order Summary</h2>
+        <div id="order-summary" style="background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1rem">
+          <!-- Populated by JS -->
+        </div>
+
+        <div style="margin-top:1.5rem;font-size:0.85rem;color:var(--gray-600)">
+          <p>✓ Free shipping on eligible items</p>
+          <p>✓ 30-day buyer protection</p>
+          <p>✓ Items shipped from Springfield, MO area</p>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    let cart = JSON.parse(localStorage.getItem('cia-cart') || '[]');
+
+    function renderOrderSummary() {
+      const container = document.getElementById('order-summary');
+      if (!container) return;
+
+      if (cart.length === 0) {
+        container.innerHTML = '<p>Your cart is empty. <a href="shop.html">Shop now</a></p>';
+        return;
+      }
+
+      let html = '';
+      let subtotal = 0;
+
+      cart.forEach(item => {
+        const price = item.price || 0;
+        subtotal += price;
+        html += `
+          <div style="display:flex;justify-content:space-between;padding:0.5rem 0;border-bottom:1px solid #f0f0f0">
+            <div style="flex:1">
+              <strong>${item.name}</strong>
+              <div style="font-size:0.8rem;color:var(--gray-500)">${item.condition || ''}</div>
+            </div>
+            <div style="text-align:right;font-weight:600">$${price.toFixed(2)}</div>
+          </div>
+        `;
+      });
+
+      const shipping = 0; // many items free
+      const total = subtotal + shipping;
+
+      html += `
+        <div style="padding-top:0.75rem">
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.25rem">
+            <span>Subtotal</span>
+            <span>$${subtotal.toFixed(2)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;margin-bottom:0.5rem">
+            <span>Shipping</span>
+            <span>${shipping === 0 ? 'Free' : '$' + shipping.toFixed(2)}</span>
+          </div>
+          <div style="display:flex;justify-content:space-between;font-size:1.15rem;font-weight:700;border-top:2px solid var(--gray-300);padding-top:0.5rem">
+            <span>Total</span>
+            <span>$${total.toFixed(2)}</span>
+          </div>
+        </div>
+      `;
+
+      container.innerHTML = html;
+      document.getElementById('checkout-total').textContent = '$' + total.toFixed(2);
+    }
+
+    let squarePayments = null;
+    let squareCard = null;
+
+    async function initSquareIfNeeded() {
+      const squareContainer = document.getElementById('square-container');
+      const paySquare = document.getElementById('pay-square');
+
+      if (!paySquare || !squareContainer) return;
+
+      paySquare.addEventListener('change', () => {
+        squareContainer.style.display = paySquare.checked ? 'block' : 'none';
+      });
+
+      document.getElementById('pay-demo').addEventListener('change', () => {
+        squareContainer.style.display = 'none';
+      });
+
+      // Only init Square if the demo script is available (from main.js logic)
+      if (typeof window.Square === 'undefined' && window.initSquareCheckout) {
+        // Reuse logic from main.js if possible, but simplified for checkout
+        try {
+          const script = document.createElement('script');
+          script.src = 'https://sandbox.web.squarecdn.com/v1/square.js';
+          script.onload = async () => {
+            // Placeholder - in real use, call the full init from main.js or duplicate minimal code
+            squareContainer.innerHTML = `
+              <div style="padding:1rem;border:1px solid var(--gray-300);border-radius:8px;background:#fff">
+                <p style="font-size:0.85rem;margin-bottom:0.5rem">Square demo ready. Use test card <strong>4111 1111 1111 1111</strong></p>
+                <input type="text" placeholder="Card number" value="4111 1111 1111 1111" style="width:100%;padding:0.5rem;margin-bottom:0.5rem">
+                <div style="display:flex;gap:0.5rem">
+                  <input type="text" placeholder="MM/YY" value="12/28" style="flex:1;padding:0.5rem">
+                  <input type="text" placeholder="CVV" value="123" style="flex:1;padding:0.5rem">
+                </div>
+              </div>
+            `;
+          };
+          document.head.appendChild(script);
+        } catch (e) {}
+      }
+    }
+
+    async function handleCheckout(e) {
+      e.preventDefault();
+      const form = e.target;
+      const btn = document.getElementById('place-order-btn');
+      if (btn) btn.disabled = true;
+
+      const paymentMethod = form.querySelector('input[name="payment"]:checked').value;
+
+      // Simulate processing
+      await new Promise(r => setTimeout(r, 800));
+
+      const order = {
+        id: 'ORD-' + Date.now().toString(36).toUpperCase().slice(-8),
+        date: new Date().toISOString(),
+        items: [...cart],
+        total: cart.reduce((sum, i) => sum + (i.price || 0), 0),
+        shipping: {
+          firstName: form.firstName.value,
+          lastName: form.lastName.value,
+          email: form.email.value,
+          address: form.address.value,
+          city: form.city.value,
+          state: form.state.value,
+          zip: form.zip.value,
+          phone: form.phone.value
+        },
+        paymentMethod: paymentMethod,
+        status: 'Paid - Processing'
+      };
+
+      // Save order (integrate with API if available)
+      let orders = JSON.parse(localStorage.getItem('cia-orders') || '[]');
+      orders.unshift(order);
+      localStorage.setItem('cia-orders', JSON.stringify(orders));
+
+      // Try to push to backend if API_BASE is set
+      if (window.API_BASE) {
+        try {
+          await fetch(`${window.API_BASE}/api/orders`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(order)
+          });
+        } catch (err) {
+          console.warn('Order sync to backend failed (demo mode)', err);
+        }
+      }
+
+      // Clear cart
+      localStorage.removeItem('cia-cart');
+      if (window.cart) window.cart = [];
+      if (typeof updateCartBadge === 'function') updateCartBadge();
+
+      // Redirect
+      window.location.href = `confirmation.html?order=${order.id}`;
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      renderOrderSummary();
+      initSquareIfNeeded();
+
+      // Pre-fill from user if logged in (demo)
+      const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
+      if (user.name) {
+        const form = document.getElementById('checkout-form');
+        if (form) {
+          const nameParts = user.name.split(' ');
+          if (nameParts[0]) form.firstName.value = nameParts[0];
+          if (nameParts[1]) form.lastName.value = nameParts[1];
+          if (user.email) form.email.value = user.email;
+        }
+      }
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,50 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Shop by brand at Consign It Away.">
+  <title>Brands | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <p class="breadcrumb"><a href="index.html">Home</a> / Brands</p>
+      <h1>Shop by Brand</h1>
+      <p>Quality consigned items from trusted names</p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container">
+      <div class="category-grid" id="brands-grid"></div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    const BRANDS = [
+      { name: 'Stafford', emoji: '👔', cat: 'clothing' },
+      { name: 'Suzuki', emoji: '🏍️', cat: 'auto' },
+      { name: 'Hammer Strength', emoji: '💪', cat: 'appliances' },
+      { name: 'Unbranded / Vintage', emoji: '✨', cat: 'collectibles' },
+      { name: 'Office Essentials', emoji: '📎', cat: 'office' },
+      { name: 'Home & Dining', emoji: '🍽️', cat: 'dining' },
+    ];
+
+    document.addEventListener('DOMContentLoaded', () => {
+      document.getElementById('brands-grid').innerHTML = BRANDS.map(b => `
+        <a href="shop.html?cat=${b.cat}&q=${encodeURIComponent(b.name)}" class="category-card">
+          <div class="emoji">${b.emoji}</div>
+          <h3>${b.name}</h3>
+        </a>
+      `).join('');
+    });
+  </script>
+</body>
+</html>

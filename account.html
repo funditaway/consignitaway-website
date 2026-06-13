@@ -1,0 +1,112 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Manage your Consign It Away account, profile, linked platforms, and plan.">
+  <title>My Account | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>My Account</h1>
+
+    <div style="display:grid;grid-template-columns:1fr 320px;gap:2rem;margin-top:1.5rem">
+      <!-- Profile -->
+      <div>
+        <h2 style="margin-bottom:1rem">Profile</h2>
+        <form id="profile-form" onsubmit="saveProfile(event)">
+          <div class="form-row">
+            <div class="form-group">
+              <label>First Name</label>
+              <input type="text" name="firstName" id="firstName">
+            </div>
+            <div class="form-group">
+              <label>Last Name</label>
+              <input type="text" name="lastName" id="lastName">
+            </div>
+          </div>
+          <div class="form-group">
+            <label>Email</label>
+            <input type="email" name="email" id="email">
+          </div>
+          <div class="form-group">
+            <label>Phone</label>
+            <input type="tel" name="phone" id="phone" placeholder="(417) 555-0123">
+          </div>
+          <button type="submit" class="btn btn-primary">Save Profile</button>
+        </form>
+      </div>
+
+      <!-- Plan & Seller ID -->
+      <div>
+        <h2 style="margin-bottom:1rem">Plan &amp; Seller Info</h2>
+        <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1rem;margin-bottom:1rem">
+          <div><strong>Current Plan:</strong> <span id="plan-name">Starter</span></div>
+          <div style="margin-top:0.5rem;font-size:0.9rem;color:var(--gray-600)">50 listings included. <a href="vendor-plans.html">Upgrade</a></div>
+        </div>
+
+        <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1rem">
+          <div><strong>Seller ID</strong></div>
+          <div style="font-family:monospace;background:#f8f9fa;padding:0.4rem;border-radius:4px;margin-top:0.25rem" id="seller-id"></div>
+          <div style="font-size:0.8rem;color:var(--gray-500);margin-top:0.5rem">Used for backend API calls and platform connections.</div>
+        </div>
+      </div>
+    </div>
+
+    <div style="margin-top:2.5rem">
+      <button onclick="logout()" class="btn btn-outline">Log Out</button>
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function loadProfile() {
+      const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
+      if (!user.email) {
+        // Not logged in - redirect to login
+        window.location.href = 'login.html';
+        return;
+      }
+
+      // Split name if needed
+      const parts = (user.name || '').split(' ');
+      document.getElementById('firstName').value = parts[0] || '';
+      document.getElementById('lastName').value = parts.slice(1).join(' ') || '';
+      document.getElementById('email').value = user.email || '';
+      document.getElementById('phone').value = user.phone || '';
+
+      document.getElementById('plan-name').textContent = (user.plan || 'starter').charAt(0).toUpperCase() + (user.plan || 'starter').slice(1);
+      document.getElementById('seller-id').textContent = user.sellerId || 'Not set';
+    }
+
+    function saveProfile(e) {
+      e.preventDefault();
+      const form = e.target;
+      const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
+
+      user.name = `${form.firstName.value} ${form.lastName.value}`.trim();
+      user.email = form.email.value;
+      user.phone = form.phone.value;
+
+      localStorage.setItem('cia-user', JSON.stringify(user));
+      showToast('Profile saved!');
+    }
+
+    function logout() {
+      localStorage.removeItem('cia-user');
+      showToast('Logged out');
+      setTimeout(() => window.location.href = 'index.html', 600);
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadProfile();
+    });
+  </script>
+</body>
+</html>

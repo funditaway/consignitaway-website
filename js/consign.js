@@ -30,15 +30,30 @@ function initConsignForm() {
 
   // AI / rule-based platform suggestion (Consign It Away picks best platforms)
   setTimeout(async () => {
-    if (!window.API_BASE) return;
-    // For new form, suggest based on current form state (simple client-side for UX)
     const form = document.getElementById('consign-form');
     if (!form) return;
-    // Pre-check common ones; real suggest happens on submit via /api/publish-all
     const checkboxes = form.querySelectorAll('input[name="platforms"]');
-    checkboxes.forEach(cb => {
-      if (['ebay', 'internal'].includes(cb.value)) cb.checked = true;
-    });
+    if (!window.API_BASE) {
+      // Fallback client-side suggestion
+      checkboxes.forEach(cb => {
+        if (['ebay', 'internal'].includes(cb.value)) cb.checked = true;
+      });
+      return;
+    }
+    try {
+      // Use the suggest endpoint if available, or default
+      const res = await fetch(`${window.API_BASE}/api/suggest-platforms`, { method: 'POST', headers: {'Content-Type': 'application/json'}, body: JSON.stringify({ listingId: 'preview' }) });
+      const data = await res.json();
+      const suggested = data.suggested || ['ebay', 'internal'];
+      checkboxes.forEach(cb => {
+        cb.checked = suggested.includes(cb.value);
+      });
+    } catch (e) {
+      // fallback
+      checkboxes.forEach(cb => {
+        if (['ebay', 'internal'].includes(cb.value)) cb.checked = true;
+      });
+    }
   }, 300);
 }
 

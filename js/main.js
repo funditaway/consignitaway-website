@@ -11,6 +11,7 @@ function saveCart() {
    Falls back to localStorage for local dev / before deploy.
 */
 let API_BASE = ''; // <-- CHANGE THIS after deploying the Worker (see README)
+window.API_BASE = API_BASE;
 
 async function loadListings() {
   if (API_BASE) {
@@ -134,7 +135,8 @@ function initHeader() {
         <button type="submit" aria-label="Search">🔍</button>
       </form>
       <div class="header-actions">
-        <button onclick="showUserModal()" class="icon-btn" title="My Account / Sign in" style="border:none">👤</button>
+        ${getCurrentUser() ? `<a href="account.html" class="icon-btn" title="My Account" style="text-decoration:none;font-size:0.8rem;width:auto;padding:0 0.65rem;border-radius:20px">${getCurrentUser().name.split(' ')[0]}</a>` : `<a href="login.html" class="icon-btn" title="Log In" style="text-decoration:none;font-size:0.75rem;width:auto;padding:0 0.6rem;border-radius:20px">Login</a>`}
+        <button onclick="showUserModal()" class="icon-btn" title="Quick account (demo)" style="border:none">👤</button>
         <button class="icon-btn" title="Wishlist" onclick="showToast('Wishlist demo')">♡</button>
         <button onclick="showCartModal(event)" class="icon-btn" title="Cart" style="border:none">
           🛒
@@ -148,7 +150,10 @@ function initHeader() {
         <ul class="nav-links">
           <li><a href="index.html" ${path === 'index.html' ? 'class="active"' : ''}>Home</a></li>
           <li><a href="shop.html" ${path === 'shop.html' ? 'class="active"' : ''}>Shop Online</a></li>
+          <li><a href="deals.html" ${path === 'deals.html' ? 'class="active"' : ''}>Daily Deals</a></li>
+          <li><a href="brands.html" ${path === 'brands.html' ? 'class="active"' : ''}>Brands</a></li>
           <li><a href="consign.html" ${path === 'consign.html' ? 'class="active"' : ''}>Consign an Item</a></li>
+          <li><a href="shipping.html" ${path === 'shipping.html' ? 'class="active"' : ''}>Shipping</a></li>
           <li><a href="how-it-works.html" ${path === 'how-it-works.html' ? 'class="active"' : ''}>How Selling Works</a></li>
           <li><a href="vendor-plans.html" ${path === 'vendor-plans.html' ? 'class="active"' : ''}>Vendor Plans</a></li>
           <li><a href="contact.html" ${path === 'contact.html' ? 'class="active"' : ''}>Contact Us</a></li>
@@ -243,6 +248,13 @@ function getQueryParam(name) {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+  if (!document.querySelector('link[rel="icon"]')) {
+    const link = document.createElement('link');
+    link.rel = 'icon';
+    link.type = 'image/svg+xml';
+    link.href = 'assets/favicon.svg';
+    document.head.appendChild(link);
+  }
   initHeader();
   initFooter();
   updateCartBadge();
@@ -422,6 +434,14 @@ function getCurrentUser() {
     return JSON.parse(localStorage.getItem('cia-user') || 'null');
   } catch (e) { return null; }
 }
+
+function getCurrentSellerId() {
+  const user = getCurrentUser();
+  return (user && user.sellerId) || 'demo-seller';
+}
+
+window.getCurrentSellerId = getCurrentSellerId;
+window.getCurrentUser = getCurrentUser;
 
 function saveCurrentUser(user) {
   localStorage.setItem('cia-user', JSON.stringify(user));

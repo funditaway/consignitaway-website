@@ -23,15 +23,18 @@ The site is fully static/client-side:
 
 ## Project Structure
 
-- `index.html`, `shop.html`, `consign.html`, `how-it-works.html`, `vendor-plans.html`, `contact.html`, `dashboard.html`
+- Core pages: `index.html`, `shop.html`, `product.html`, `cart.html`, `checkout.html`, `confirmation.html`
+- Auth & Seller: `login.html`, `dashboard.html`, `account.html`, `payouts.html`, `connections.html`, `consign.html`
+- Info & Legal: `how-it-works.html`, `vendor-plans.html`, `contact.html`, `about.html`, `faq.html`, `marketplaces.html`, `ai-recommendations.html`, `terms.html`, `privacy.html`, `returns.html`, `admin.html`, `404.html`
 - `css/styles.css` — teal/orange design system
-- `js/main.js` — shared header, footer, cart, search, nav
-- `js/products.js` — categories + demo PRODUCTS + render helpers
-- `js/consign.js` — form logic for submitting listings (persisted in localStorage)
+- `js/main.js` — shared header (dynamic login state), footer, cart, search, nav
+- `js/products.js` — categories + demo PRODUCTS + render helpers (links to product.html)
+- `js/consign.js` — form logic for submitting listings (with AI platform suggestions)
 - `wrangler.toml` — Cloudflare Pages config (static output from root)
 - `_redirects` — placeholder for hosting redirects
 - `CNAME` — custom domain hint for GitHub Pages
 - `deploy-dns.ps1` — PowerShell helper to point consignitaway.com DNS at GitHub Pages via Cloudflare API
+- `worker/` — Cloudflare Worker backend (listings, orders, eBay OAuth, publish, Google feed, etc.)
 
 ## Deployment Options
 
@@ -102,12 +105,15 @@ In the cart modal there's a "Pay with Square (Sandbox)" button.
 All features gracefully fall back if the Worker isn't deployed yet.
 
 ## Notes / Current State
-- **Real product images**: Professional studio photos (generated) for all 12 demo items live in `assets/`. Product cards use `<img>` (contain on white).
-- **Photo upload + detail modal**: Consign form has drag & drop + live previews (stored as data URLs). All product cards are now clickable → beautiful detail modal with large photo(s), full description, add-to-cart, and "Consign Similar".
-- **Checkout & Orders (real backend)**: Cart icon opens modal. Regular checkout or full Square Web Payments SDK button (sandbox). Orders go to KV via Worker (or local fallback). Seller Dashboard has working Orders tab with Ship/Delivered.
-- **Seller plan enforcement**: Consign form checks your plan limit (Starter=50, etc.). Upgrade link if over.
-- **Dashboard**: Fully interactive panels (Products with live filters + photos, Orders, Messages). Dynamic stats + personal greeting when signed in.
-- **Persistence**: See the new "tiny backend" section below for Cloudflare Workers + KV.
+- **Full site structure**: Buyer flow (Shop → Product Detail → Cart → Checkout → Confirmation), Seller flow (Login → Consign with AI platform suggestions → Dashboard → Connections/Payouts/Account).
+- **New pages**: product.html (full details with gallery), cart.html, checkout.html, confirmation.html, login.html (signup tabs), account.html, payouts.html, connections.html (eBay connect with OAuth), faq, about, marketplaces, ai-recommendations, admin demo, 404, legal pages.
+- **Real product images**: Professional studio photos (generated) for all 12 demo items live in `assets/`. Product cards link to product.html.
+- **Photo upload + AI**: Consign form has drag & drop + live previews (data URLs). AI suggests platforms (ebay/internal by default, backend /api/suggest-platforms for more).
+- **Checkout & Orders (real backend)**: Full pages. Square or demo. Orders saved to local + Worker API. Dashboard uses them.
+- **Seller plan enforcement & connections**: Consign checks plan. Connections page for platforms, with live eBay OAuth via Worker.
+- **Dashboard**: Interactive panels, now with sidebar links to new pages. Dynamic from local/API.
+- **Persistence & Multi-platform**: Worker for listings/orders/publish/sync (eBay full, others stub), Google feed, per-seller. See worker/ for details.
+- **Header**: Add "Login" link in nav (see main.js). For dynamic user name linking to account, personalize after innerHTML using getCurrentUser.
 - **Seller account (demo)**: Click the 👤 icon in header to "sign in" (name/email persisted). Shows short name in header and personal greeting in dashboard.
 - Listings / cart / orders remain browser-only (localStorage) — perfect demo / prototype. Real production would add backend, auth, real marketplace APIs, and payments.
 - SEO: Basic Open Graph + meta on homepage. More pages can be extended.

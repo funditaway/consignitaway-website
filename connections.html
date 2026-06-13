@@ -1,0 +1,101 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Connect your Consign It Away account to eBay, Amazon, and other marketplaces.">
+  <title>Marketplace Connections | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="container" style="padding:2rem 0">
+    <h1>Marketplace Connections</h1>
+    <p style="color:var(--gray-600);margin-bottom:1.5rem">
+      Link your accounts so Consign It Away can list and sync your items across platforms using official APIs.
+    </p>
+
+    <div id="connections-grid" style="display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:1.25rem">
+      <!-- Populated by JS: eBay, Amazon, etc. -->
+    </div>
+
+    <div style="margin-top:2rem;background:var(--teal-50);padding:1.25rem;border-radius:8px;font-size:0.9rem">
+      <strong>How it works:</strong> When you connect a platform, our system uses your credentials (securely stored) to publish listings and pull orders automatically. 
+      Our AI chooses the best platforms for each item based on category, condition, and price.
+    </div>
+  </div>
+
+  <footer id="site-footer"></footer>
+
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function loadConnections() {
+      const container = document.getElementById('connections-grid');
+      const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
+      const sellerId = user.sellerId || 'demo-seller';
+
+      const platforms = [
+        { key: 'ebay', name: 'eBay', desc: 'Millions of buyers. Great for most categories.', connected: true },
+        { key: 'amazon', name: 'Amazon', desc: 'Huge reach for new/like-new items.', connected: false },
+        { key: 'facebook', name: 'Facebook / Instagram', desc: 'Local + social selling power.', connected: false },
+        { key: 'whatnot', name: 'Whatnot', desc: 'Live auctions for collectibles & more.', connected: false }
+      ];
+
+      let html = '';
+
+      platforms.forEach(p => {
+        const status = p.connected 
+          ? `<span style="color:var(--teal-600);font-weight:600">Connected ✓</span>` 
+          : `<span style="color:var(--gray-500)">Not connected</span>`;
+
+        const action = p.key === 'ebay' 
+          ? `<button class="btn btn-primary" style="margin-top:0.75rem" onclick="connectEbay('${sellerId}')">Connect eBay</button>` 
+          : `<button class="btn btn-outline" style="margin-top:0.75rem" disabled>Coming soon</button>`;
+
+        html += `
+          <div style="background:white;border:1px solid var(--gray-300);border-radius:12px;padding:1.25rem">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <strong>${p.name}</strong>
+              ${status}
+            </div>
+            <p style="font-size:0.9rem;color:var(--gray-600);margin:0.5rem 0 0.75rem">${p.desc}</p>
+            ${action}
+            ${p.connected ? `<div style="font-size:0.75rem;margin-top:0.5rem;color:var(--gray-500)">Last synced: just now</div>` : ''}
+          </div>
+        `;
+      });
+
+      container.innerHTML = html;
+    }
+
+    async function connectEbay(sellerId) {
+      if (!window.API_BASE) {
+        alert('Backend not configured (set API_BASE in main.js). Using demo mode.');
+        // Demo: just mark as connected
+        localStorage.setItem('cia-ebay-connected', 'true');
+        showToast('eBay connected! (demo)');
+        setTimeout(() => window.location.reload(), 800);
+        return;
+      }
+
+      try {
+        const res = await fetch(`${window.API_BASE}/api/ebay/auth-url?sellerId=${sellerId}`);
+        const data = await res.json();
+        if (data.authUrl) {
+          window.location.href = data.authUrl;
+        } else {
+          alert('Could not get auth URL from backend.');
+        }
+      } catch (e) {
+        alert('Connection failed. Check your Worker deployment.');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+      loadConnections();
+    });
+  </script>
+</body>
+</html>
