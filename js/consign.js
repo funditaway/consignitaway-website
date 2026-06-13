@@ -27,6 +27,19 @@ function initConsignForm() {
       addCategoryTag(urlCat);
     }
   }
+
+  // AI / rule-based platform suggestion (Consign It Away picks best platforms)
+  setTimeout(async () => {
+    if (!window.API_BASE) return;
+    // For new form, suggest based on current form state (simple client-side for UX)
+    const form = document.getElementById('consign-form');
+    if (!form) return;
+    // Pre-check common ones; real suggest happens on submit via /api/publish-all
+    const checkboxes = form.querySelectorAll('input[name="platforms"]');
+    checkboxes.forEach(cb => {
+      if (['ebay', 'internal'].includes(cb.value)) cb.checked = true;
+    });
+  }, 300);
 }
 
 function getConditionDesc(condition) {

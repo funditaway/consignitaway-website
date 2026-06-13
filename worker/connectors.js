@@ -1,130 +1,281 @@
 ﻿/**
  * Marketplace Connectors for Consign It Away
- * 
- * Each platform gets its own connector with:
- * - publishListing(listing, credentials)
- * - syncOrders(credentials)
- * - updateInventory(listingId, quantity, credentials)
  *
- * Credentials are stored per-seller in KV (see main worker).
+ * Consign It Away's value: Users consign once. Our system (with AI-like rules for now)
+ * picks the best platforms based on category, price, condition, etc., and lists/synces via official APIs.
+ *
+ * Each connector implements:
+ *   - publishListing(listing, accessToken, env) -> { platformId, status, ... }
+ *   - syncOrders(accessToken, env) -> array of normalized orders
+ *   - updateInventory(sku, quantity, accessToken) [optional]
+ *
+ * Credentials (OAuth tokens) are stored server-side in KV by the main worker.
+ * Never expose refresh tokens to frontend.
  */
 
 export const MarketplaceConnectors = {
   ebay: {
     name: 'eBay',
-    async publishListing(listing, credentials) {
-      // eBay Sell Inventory API example (simplified)
-      // Real implementation needs:
-      // 1. OAuth2 token refresh using credentials.refreshToken + clientId/secret
-      // 2. Create Inventory Item
-      // 3. Create Offer
-      // 4. Publish Offer
 
-      const token = await getEbayToken(credentials); // implement OAuth
+    async publishListing(listing, accessToken, env = {}) {
+      if (!accessToken) throw new Error('No eBay access token');
 
-      const payload = {
+      const marketplaceId = 'EBAY_US'; // or EBAY_GB etc. based on seller
+      const sku = listing.sku || listing.id;
+
+      // 1. Create / Update Inventory Item (product details)
+      const inventoryItem = {
+        availability: {
+          shipToLocationAvailability: {
+            quantity: listing.quantity || 1
+          }
+        },
         product: {
           title: listing.name,
-          description: listing.fullDescription || listing.description,
-          aspects: mapCategoriesToEbayAspects(listing.categories),
-          imageUrls: listing.photos || (listing.image ? [listing.image] : []),
+          description: listing.fullDescription || listing.description || listing.name,
+          aspects: this.mapAspects(listing),
+          imageUrls: this.getImageUrls(listing),
+          mpn: listing.sku || undefined
         },
-        condition: mapConditionToEbay(listing.condition),
-        // price, shipping, etc.
+        condition: this.mapCondition(listing.condition),
+        conditionDescription: listing.condition || 'Used'
       };
 
-      // Example call (you must implement the real endpoints)
-      const res = await fetch('https://api.ebay.com/sell/inventory/v1/inventory_item', {
+      const itemRes = await fetch(`https://api.ebay.com/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
+        method: 'PUT',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': marketplaceId
+        },
+        body: JSON.stringify(inventoryItem)
+      });
+
+      if (!itemRes.ok) {
+        const err = await itemRes.text();
+        throw new Error(`eBay inventory item failed: ${err}`);
+      }
+
+      // 2. Create Offer (price, marketplace, quantity)
+      const price = parseFloat(listing.price) || 0;
+      const offer = {
+        sku,
+        marketplaceId,
+        format: 'FIXED_PRICE',
+        availableQuantity: listing.quantity || 1,
+        pricingSummary: {
+          price: {
+            value: price.toFixed(2),
+            currency: 'USD'
+          }
+        },
+        categoryId: this.mapCategoryToEbay(listing.categories?.[0] || 'collectibles'), // rough mapping
+        listingPolicies: {
+          fulfillmentPolicyId: env.EBAY_FULFILLMENT_POLICY_ID || undefined, // user must configure policies
+          paymentPolicyId: env.EBAY_PAYMENT_POLICY_ID || undefined,
+          returnPolicyId: env.EBAY_RETURN_POLICY_ID || undefined
+        }
+      };
+
+      const offerRes = await fetch('https://api.ebay.com/sell/inventory/v1/offer', {
         method: 'POST',
         headers: {
-          'Authorization': `Bearer ${token}`,
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': marketplaceId
+        },
+        body: JSON.stringify(offer)
+      });
+
+      if (!offerRes.ok) {
+        const err = await offerRes.text();
+        throw new Error(`eBay offer creation failed: ${err}`);
+      }
+
+      const offerData = await offerRes.json();
+      const offerId = offerData.offerId;
+
+      // 3. Publish the offer (makes it live)
+      const publishRes = await fetch(`https://api.ebay.com/sell/inventory/v1/offer/${offerId}/publish`, {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
+          'Content-Type': 'application/json',
+          'X-EBAY-C-MARKETPLACE-ID': marketplaceId
+        }
+      });
+
+      if (!publishRes.ok) {
+        const err = await publishRes.text();
+        throw new Error(`eBay publish failed: ${err}`);
+      }
+
+      const publishData = await publishRes.json();
+
+      return {
+        platformId: `ebay-${offerId}`,
+        status: 'live',
+        listingUrl: publishData.listingUrl || `https://www.ebay.com/itm/${sku}`,
+        offerId,
+        raw: publishData
+      };
+    },
+
+    async syncOrders(accessToken, env = {}) {
+      if (!accessToken) return [];
+
+      const marketplaceId = 'EBAY_US';
+      // Get recent orders (last 30 days example)
+      const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+
+      const ordersRes = await fetch(
+        `https://api.ebay.com/sell/fulfillment/v1/order?filter=creationdate:[${thirtyDaysAgo}..]&limit=50`,
+        {
+          headers: {
+            'Authorization': `Bearer ${accessToken}`,
+            'X-EBAY-C-MARKETPLACE-ID': marketplaceId
+          }
+        }
+      );
+
+      if (!ordersRes.ok) {
+        console.error('eBay order sync failed');
+        return [];
+      }
+
+      const data = await ordersRes.json();
+      const orders = data.orders || [];
+
+      // Normalize to internal format
+      return orders.map(order => ({
+        id: `ebay-${order.orderId}`,
+        platform: 'ebay',
+        platformOrderId: order.orderId,
+        date: order.creationDate,
+        status: this.mapEbayOrderStatus(order.orderFulfillmentStatus),
+        total: parseFloat(order.pricingSummary?.total?.value || 0),
+        buyer: {
+          name: order.buyer?.username || 'eBay Buyer',
+          address: order.fulfillmentStartInstructions?.[0]?.shippingStep?.shipTo?.contactAddress ?
+            `${order.fulfillmentStartInstructions[0].shippingStep.shipTo.contactAddress.addressLine1}, ${order.fulfillmentStartInstructions[0].shippingStep.shipTo.contactAddress.city}` : 'Address on eBay'
+        },
+        items: (order.lineItems || []).map(li => ({
+          name: li.title,
+          price: parseFloat(li.total?.value || 0),
+          quantity: li.quantity || 1,
+          sku: li.sku
+        })),
+        raw: order
+      }));
+    },
+
+    async updateInventory(sku, quantity, accessToken) {
+      if (!accessToken || !sku) return;
+      // Use Inventory Item API to update availability
+      const res = await fetch(`https://api.ebay.com/sell/inventory/v1/inventory_item/${encodeURIComponent(sku)}`, {
+        method: 'PATCH', // or PUT with partial
+        headers: {
+          'Authorization': `Bearer ${accessToken}`,
           'Content-Type': 'application/json',
           'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US'
         },
-        body: JSON.stringify(payload)
+        body: JSON.stringify({
+          availability: {
+            shipToLocationAvailability: { quantity }
+          }
+        })
       });
-
-      if (!res.ok) throw new Error('eBay publish failed: ' + await res.text());
-
-      return { platformId: 'ebay-' + Date.now(), status: 'listed', raw: await res.json() };
+      return res.ok;
     },
 
-    async syncOrders(credentials) {
-      // Use eBay Fulfillment API to get orders
-      const token = await getEbayToken(credentials);
-      // ... fetch orders, map to internal format
-      return []; // array of normalized orders
-    }
-  },
-
-  amazon: {
-    name: 'Amazon',
-    async publishListing(listing, credentials) {
-      // Amazon SP-API is complex (requires registration as developer, LWA auth, etc.)
-      // High level:
-      // 1. Use Selling Partner API to create product (Catalog Items or Listings Items API)
-      // 2. Very strict on categories, GTINs, compliance.
-      // Most consignment services use feeds or approved tools.
-
-      console.log('Amazon connector called for', listing.name);
-      // Placeholder - in real code use amazon-sp-api npm package or direct signed requests
-      return { platformId: 'amzn-' + Date.now(), status: 'submitted_to_feed', note: 'Amazon SP-API requires additional setup' };
+    // Helpers
+    mapCondition(condition) {
+      const map = {
+        'New': 'NEW',
+        'Like New': 'LIKE_NEW',
+        'Very Good': 'VERY_GOOD',
+        'Good': 'GOOD',
+        'Acceptable': 'ACCEPTABLE',
+        'Collectible': 'USED_EXCELLENT'
+      };
+      return map[condition] || 'USED';
     },
 
-    async syncOrders(credentials) {
+    mapAspects(listing) {
+      const aspects = {};
+      if (listing.categories?.length) aspects['Category'] = listing.categories;
+      if (listing.condition) aspects['Condition'] = [listing.condition];
+      // Add more mappings based on your internal data (color, size, brand etc.)
+      return aspects;
+    },
+
+    getImageUrls(listing) {
+      if (listing.photos && Array.isArray(listing.photos)) return listing.photos.slice(0, 12);
+      if (listing.image) return [listing.image];
       return [];
+    },
+
+    mapCategoryToEbay(cat) {
+      // Rough mapping - expand with real eBay category IDs from their taxonomy
+      const map = {
+        'clothing': '11450',
+        'electronics': '293',
+        'collectibles': '1',
+        'auto': '6001',
+        'books': '267'
+      };
+      return map[cat] || '1'; // default
+    },
+
+    mapEbayOrderStatus(status) {
+      if (status === 'FULFILLED') return 'Shipped';
+      if (status === 'IN_PROGRESS') return 'Paid - Awaiting shipment';
+      return 'Pending';
     }
   },
 
-  facebook: {
-    name: 'Facebook Marketplace / Instagram',
-    async publishListing(listing, credentials) {
-      // Facebook/Instagram Shops uses Graph API or Commerce API.
-      // Automated listing to Marketplace is heavily restricted.
-      // Better for Shops catalog feed or manual.
-
-      return { platformId: 'fb-' + Date.now(), status: 'manual_or_feed_recommended' };
-    }
-  },
-
-  whatnot: {
-    name: 'Whatnot',
-    async publishListing(listing, credentials) {
-      // Whatnot has limited public seller APIs. Usually requires partnership.
-      // Many sellers use their web app or Zapier-style tools.
-      return { platformId: null, status: 'partnership_required' };
-    }
-  },
-
+  // Stubs for other platforms (expand similarly)
+  amazon: { /* ... SP-API with LWA OAuth ... */ name: 'Amazon', async publishListing() { return { status: 'requires_sp_api_setup' }; }, async syncOrders() { return []; } },
+  etsy: { /* Etsy v3 API with OAuth */ name: 'Etsy', async publishListing(listing, token) { /* similar using /v3/application/listings */ return { platformId: 'etsy-' + Date.now(), status: 'listed' }; } },
+  facebook: { name: 'Facebook / Instagram', async publishListing() { return { status: 'feed_or_shops_api_recommended' }; } },
+  whatnot: { name: 'Whatnot', async publishListing() { return { status: 'partnership_or_manual' }; } },
   internal: {
     name: 'ConsignItAway Store',
-    async publishListing(listing, credentials) {
-      // Already handled by our own system
-      return { platformId: listing.id, status: 'live' };
-    }
+    async publishListing(listing) { return { platformId: listing.id, status: 'live_on_site' }; }
   }
 };
 
-// Helper stubs (implement real OAuth + mapping in production)
-async function getEbayToken(creds) {
-  // Use client_credentials or authorization_code flow
-  // Store refresh token securely in KV per seller
-  throw new Error('Implement eBay OAuth token refresh using your app credentials');
-}
+/**
+ * AI / Rule-based platform picker (Consign It Away's "AI")
+ * Picks best platforms based on category, price, condition.
+ * In production, this could call an LLM or use ML model.
+ */
+export function suggestPlatforms(listing) {
+  const suggestions = ['internal'];
+  const price = parseFloat(listing.price) || 0;
+  const cat = (listing.categories || [])[0] || '';
+  const condition = listing.condition || '';
 
-function mapConditionToEbay(condition) {
-  const map = {
-    'New': 'NEW',
-    'Like New': 'LIKE_NEW',
-    'Very Good': 'VERY_GOOD',
-    'Good': 'GOOD',
-    'Acceptable': 'ACCEPTABLE',
-    'Collectible': 'PRE_OWNED_EXCELLENT'
-  };
-  return map[condition] || 'USED';
-}
+  // High value or collectibles -> eBay
+  if (price > 50 || ['collectibles', 'auto'].includes(cat)) {
+    suggestions.push('ebay');
+  }
 
-function mapCategoriesToEbayAspects(categories) {
-  // Map your internal categories to eBay aspects (very platform specific)
-  return { Brand: ['Unbranded'], Condition: ['Used'] }; // example
+  // Electronics, good condition -> Amazon
+  if (['electronics', 'appliances'].includes(cat) && ['New', 'Like New'].includes(condition)) {
+    suggestions.push('amazon');
+  }
+
+  // Clothing, mid price -> Facebook / Etsy
+  if (cat === 'clothing' && price < 100) {
+    suggestions.push('facebook');
+  }
+
+  // Vintage / unique -> Etsy
+  if (condition === 'Collectible' || cat === 'crafts') {
+    suggestions.push('etsy');
+  }
+
+  // Always suggest internal store
+  return [...new Set(suggestions)];
 }

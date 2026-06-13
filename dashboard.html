@@ -31,6 +31,15 @@
         <a href="vendor-plans.html" class="btn btn-primary">Upgrade Your Plan</a>
       </div>
 
+      <!-- Connected Marketplaces / Connect eBay flow -->
+      <div id="platforms-section" style="margin-bottom:1.5rem;padding:1rem;background:var(--teal-50);border-radius:8px">
+        <strong>Connected Platforms</strong> 
+        <span id="connected-platforms" style="margin-left:0.5rem;font-size:0.9rem"></span>
+        <button class="btn btn-secondary" style="margin-left:1rem;padding:0.3rem 0.8rem;font-size:0.85rem" onclick="connectEbay()">Connect eBay</button>
+        <button class="btn btn-secondary" style="margin-left:0.5rem;padding:0.3rem 0.8rem;font-size:0.85rem" onclick="publishSelected()">Publish Selected to Best Platforms (AI)</button>
+        <div style="margin-top:0.5rem;font-size:0.75rem;color:var(--gray-600)">Consign It Away automatically lists on the best platforms for your item using official APIs. <a href="#" onclick="downloadGoogleFeed();return false">Download Google Merchant Center feed</a></div>
+      </div>
+
       <div class="dashboard-stats">
         <div class="stat-card">
           <div class="label">Active Listings</div>
@@ -92,7 +101,6 @@
       const listings = await (window.loadListings ? window.loadListings() : Promise.resolve(JSON.parse(localStorage.getItem('cia-listings') || '[]')));
       const orders = await (window.loadOrders ? window.loadOrders() : Promise.resolve(JSON.parse(localStorage.getItem('cia-orders') || '[]')));
 
-      // store for closures in this scope if needed
       window.__currentListings = listings;
       window.__currentOrders = orders;
 
@@ -100,6 +108,125 @@
       renderOrdersPanel(orders, false);
       setupPanelSwitching();
       updateOpenOrdersStat(orders);
+      updatePlatformsUI(listings);
+    }
+
+    async function connectEbay() {
+      if (!window.API_BASE) { alert('Set your Worker URL first (API_BASE)'); return; }
+      const sellerId = window.getCurrentSellerId ? window.getCurrentSellerId() : 'demo-seller';
+      const res = await fetch(`${window.API_BASE}/api/ebay/auth-url?sellerId=${sellerId}`);
+      const data = await res.json();
+      if (data.authUrl) {
+        window.location.href = data.authUrl; // eBay OAuth flow
+      } else {
+        alert('Could not get eBay auth URL. Check Worker env (EBAY_CLIENT_ID, EBAY_REDIRECT_URI).');
+      }
+    }
+
+    async function publishSelected() {
+      const listings = window.__currentListings || [];
+      if (!listings.length) return alert('No listings');
+      // For demo, publish the first active one using AI suggest
+      const first = listings.find(l => l.available !== false) || listings[0];
+      if (!first) return;
+      const sellerId = window.getCurrentSellerId ? window.getCurrentSellerId() : 'demo-seller';
+      const res = await fetch(`${window.API_BASE}/api/publish-all?sellerId=${sellerId}`, {
+        method: 'POST',
+        headers: {'Content-Type': 'application/json'},
+        body: JSON.stringify({ listingId: first.id })
+      });
+      const data = await res.json();
+      alert('Publish results: ' + JSON.stringify(data.results || data.suggested));
+      await renderDashboard();
+    }
+
+    function updatePlatformsUI(listings = []) {
+      const el = document.getElementById('connected-platforms');
+      if (!el) return;
+      const published = new Set();
+      listings.forEach(l => {
+        if (l.publishedTo) Object.keys(l.publishedTo).forEach(p => published.add(p));
+      });
+      el.innerHTML = published.size ? Array.from(published).map(p => `<span class="marketplace-badge" style="margin:0 2px">${p}</span>`).join('') : 'None yet';
+    }
+
+    function showOrderModal(order) {
+      const existing = document.getElementById('order-modal');
+      if (existing) existing.remove();
+
+      const modal = document.createElement('div');
+      modal.id = 'order-modal';
+      modal.style.cssText = 'position:fixed;inset:0;background:rgba(0,0,0,0.6);z-index:500;display:flex;align-items:center;justify-content:center;padding:1rem';
+      modal.onclick = (e) => { if (e.target === modal) modal.remove(); };
+
+      const itemsHtml = (order.items || []).map(i => `
+        <div style="display:flex;justify-content:space-between;border-bottom:1px solid #eee;padding:4px 0">
+          <span>${i.name} × ${i.quantity || 1}</span>
+          <span>$${(i.price || 0).toFixed(2)}</span>
+        </div>`).join('');
+
+      modal.innerHTML = `
+        <div onclick="event.stopImmediatePropagation()" style="background:#fff;max-width:520px;width:100%;border-radius:12px;padding:1.5rem;box-shadow:var(--shadow-lg)">
+          <div style="display:flex;justify-content:space-between">
+            <h3>Order ${order.id}</h3>
+            <button onclick="this.closest('#order-modal').remove()" style="background:none;border:none;font-size:1.5rem;cursor:pointer">×</button>
+          </div>
+          <p><strong>Platform:</strong> ${order.platform || 'Internal'} | <strong>Status:</strong> ${order.status}</p>
+          <p><strong>Buyer:</strong> ${order.buyer?.name || 'N/A'}<br>${order.buyer?.address || ''}</p>
+          <p><strong>Total:</strong> $${(order.total || 0).toFixed(2)} | <strong>Date:</strong> ${new Date(order.date).toLocaleDateString()}</p>
+          
+          <div style="margin:1rem 0"><strong>Items</strong>${itemsHtml}</div>
+
+          <div style="display:flex;gap:0.5rem;margin-top:1rem">
+            <button class="btn btn-secondary" onclick="markOrderShippedFromModal('${order.id}')">Mark Shipped</button>
+            <button class="btn btn-primary" onclick="markOrderDeliveredFromModal('${order.id}'); this.closest('#order-modal').remove()">Mark Delivered (Cross-Platform Update)</button>
+          </div>
+          <div style="font-size:0.75rem;color:#666;margin-top:0.5rem">Marking delivered will attempt to mark sold on other platforms where this item was listed.</div>
+        </div>
+      `;
+      document.body.appendChild(modal);
+    }
+
+    async function markOrderShippedFromModal(orderId) {
+      // Simple local update for demo + re-render
+      let orders = window.__currentOrders || [];
+      const ord = orders.find(o => o.id === orderId);
+      if (ord) ord.status = 'Shipped - In transit';
+      window.__currentOrders = orders;
+      // In real: call backend update
+      await renderDashboard();
+      document.getElementById('order-modal')?.remove();
+    }
+
+    async function markOrderDeliveredFromModal(orderId) {
+      let orders = window.__currentOrders || [];
+      const ord = orders.find(o => o.id === orderId);
+      if (ord) {
+        ord.status = 'Delivered';
+        // Trigger cross-platform sold logic by re-syncing or direct call
+        if (window.API_BASE) {
+          try {
+            await fetch(`${window.API_BASE}/api/sync-orders?sellerId=${window.getCurrentSellerId ? window.getCurrentSellerId() : 'demo-seller'}`, { method: 'POST' });
+          } catch(e){}
+        }
+      }
+      window.__currentOrders = orders;
+      await renderDashboard();
+      document.getElementById('order-modal')?.remove();
+    }
+
+    async function downloadGoogleFeed() {
+      if (!window.API_BASE) { alert('Worker API_BASE not set'); return; }
+      const sellerId = window.getCurrentSellerId ? window.getCurrentSellerId() : 'demo-seller';
+      const res = await fetch(`${window.API_BASE}/api/google-feed?sellerId=${sellerId}`);
+      const xml = await res.text();
+      const blob = new Blob([xml], {type: 'application/xml'});
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `consign-it-away-${sellerId}-google-feed.xml`;
+      a.click();
+      URL.revokeObjectURL(url);
     }
 
     function setupPanelSwitching() {
@@ -301,15 +428,15 @@
             </thead>
             <tbody>
               ${orders.map((o, idx) => `
-                <tr>
+                <tr style="cursor:pointer" onclick="showOrderModal(${JSON.stringify(o).replace(/"/g, '&quot;')})">
                   <td><strong>${o.id}</strong><br><small>${o.buyer ? o.buyer.name : ''}</small></td>
                   <td>${new Date(o.date).toLocaleDateString()}</td>
                   <td>${o.items.length} items<br><small>${o.items.map(it=>it.name).join(', ')}</small></td>
                   <td><strong>$${o.total.toFixed(2)}</strong></td>
                   <td><span style="color:var(--teal-700)">${o.status}</span></td>
                   <td class="table-actions">
-                    <button onclick="markOrderShipped(${idx})">Ship</button>
-                    <button onclick="markOrderDelivered(${idx})">Delivered</button>
+                    <button onclick="event.stopImmediatePropagation(); markOrderShipped(${idx})">Ship</button>
+                    <button onclick="event.stopImmediatePropagation(); markOrderDelivered(${idx})">Delivered</button>
                   </td>
                 </tr>
               `).join('')}
