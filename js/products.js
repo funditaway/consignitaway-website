@@ -83,10 +83,15 @@ function productEmoji(category) {
   return cat ? cat.emoji : '📦';
 }
 
+const PLACEHOLDER_IMG = 'assets/placeholder-product.svg';
+
+function productImageSrc(product) {
+  return product.image || PLACEHOLDER_IMG;
+}
+
 function renderProductCard(product) {
-  const imgHtml = product.image
-    ? `<img src="${product.image}" alt="${product.name}" loading="lazy" onerror="this.style.display='none';this.parentNode.insertAdjacentHTML('beforeend','<span>${product.emoji || productEmoji(product.category)}</span>')">`
-    : `<span>${product.emoji || productEmoji(product.category)}</span>`;
+  const emoji = product.emoji || productEmoji(product.category);
+  const imgHtml = `<img src="${productImageSrc(product)}" alt="${product.name}" loading="lazy" onerror="this.onerror=null;this.src='${PLACEHOLDER_IMG}';">`;
   return `
     <a href="product.html?id=${product.id}" class="product-card" style="text-decoration:none;color:inherit" data-id="${product.id}">
       <div class="product-image">

@@ -23,7 +23,7 @@ The site is fully static/client-side:
 
 ## Project Structure
 
-- Core pages: `index.html`, `shop.html`, `product.html`, `cart.html`, `checkout.html`, `confirmation.html`
+- Core pages: `index.html`, `shop.html`, `product.html`, `cart.html`, `checkout.html`, `confirmation.html`, `deals.html`, `brands.html`, `shipping.html`
 - Auth & Seller: `login.html`, `dashboard.html`, `account.html`, `payouts.html`, `connections.html`, `consign.html`
 - Info & Legal: `how-it-works.html`, `vendor-plans.html`, `contact.html`, `about.html`, `faq.html`, `marketplaces.html`, `ai-recommendations.html`, `terms.html`, `privacy.html`, `returns.html`, `admin.html`, `404.html`
 - `css/styles.css` — teal/orange design system

@@ -57,12 +57,19 @@
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
-    function loadEarnings() {
-      const orders = JSON.parse(localStorage.getItem('cia-orders') || '[]');
+    async function loadEarnings() {
+      let orders = JSON.parse(localStorage.getItem('cia-orders') || '[]');
       const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
       const sellerId = user.sellerId;
 
-      // Filter orders that belong to this seller (demo: all for simplicity, or match by sellerId if present)
+      if (window.API_BASE) {
+        try {
+          const res = await fetch(`${window.API_BASE}/api/orders?sellerId=${sellerId}`);
+          if (res.ok) orders = await res.json();
+        } catch (e) { console.warn('Using local orders for payouts'); }
+      }
+
+      // Filter orders that belong to this seller
       const myOrders = orders.filter(o => !o.sellerId || o.sellerId === sellerId);
 
       let total = 0;

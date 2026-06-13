@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Launch Setup | Consign It Away</title>
+  <link rel="stylesheet" href="css/styles.css">
+</head>
+<body>
+  <header id="site-header"></header>
+
+  <div class="page-header">
+    <div class="container">
+      <h1>Launch Setup Checklist</h1>
+      <p>Configure DNS, backend, and payments to go fully live</p>
+    </div>
+  </div>
+
+  <section class="section">
+    <div class="container" style="max-width:720px">
+      <div id="status-cards" style="display:grid;gap:1rem;margin-bottom:2rem"></div>
+
+      <form class="form-card" onsubmit="saveConfig(event)">
+        <h2 style="color:var(--teal-900);margin-bottom:1.5rem">Configuration</h2>
+
+        <div class="form-group">
+          <label>Worker API URL</label>
+          <input type="url" name="apiBase" id="apiBase" placeholder="https://consignitaway-api.yourname.workers.dev">
+          <p style="font-size:0.8rem;color:var(--gray-500);margin-top:0.25rem">Deploy with: <code>npm run deploy:worker</code></p>
+        </div>
+
+        <div class="form-group">
+          <label>Square Application ID (sandbox)</label>
+          <input type="text" name="squareAppId" id="squareAppId" placeholder="sandbox-sq0idb-...">
+        </div>
+
+        <div class="form-group">
+          <label>Square Location ID</label>
+          <input type="text" name="squareLocationId" id="squareLocationId" placeholder="Location ID from Square dashboard">
+        </div>
+
+        <button type="submit" class="btn btn-primary">Save Configuration</button>
+        <button type="button" class="btn btn-outline" style="margin-left:0.5rem" onclick="testWorker()">Test Worker</button>
+      </form>
+
+      <div class="form-card" style="margin-top:2rem">
+        <h2 style="color:var(--teal-900);margin-bottom:1rem">GoDaddy DNS (Priority #1)</h2>
+        <p style="color:var(--gray-600);margin-bottom:1rem">Point <strong>consignitaway.com</strong> to GitHub Pages:</p>
+        <table class="data-table">
+          <thead><tr><th>Type</th><th>Name</th><th>Value</th></tr></thead>
+          <tbody>
+            <tr><td>A</td><td>@</td><td>185.199.108.153</td></tr>
+            <tr><td>A</td><td>@</td><td>185.199.109.153</td></tr>
+            <tr><td>A</td><td>@</td><td>185.199.110.153</td></tr>
+            <tr><td>A</td><td>@</td><td>185.199.111.153</td></tr>
+            <tr><td>CNAME</td><td>www</td><td>funditaway.github.io</td></tr>
+          </tbody>
+        </table>
+        <p style="font-size:0.85rem;color:var(--gray-500);margin-top:1rem">Or run <code>npm run dns:godaddy</code> with API keys.</p>
+      </div>
+
+      <div class="form-card" style="margin-top:2rem">
+        <h2 style="color:var(--teal-900);margin-bottom:1rem">Worker Deploy Steps</h2>
+        <ol style="color:var(--gray-700);line-height:2;padding-left:1.25rem">
+          <li><code>npx wrangler login</code></li>
+          <li><code>npx wrangler kv namespace create CONSIGNED_DATA --config wrangler-worker.toml</code></li>
+          <li>Paste KV id into <code>wrangler-worker.toml</code></li>
+          <li><code>npm run deploy:worker</code></li>
+          <li>Paste Worker URL above and save</li>
+          <li><code>npx wrangler secret put SQUARE_ACCESS_TOKEN --config wrangler-worker.toml</code></li>
+        </ol>
+      </div>
+    </div>
+  </section>
+
+  <footer id="site-footer"></footer>
+  <script src="js/products.js"></script>
+  <script src="js/main.js"></script>
+  <script>
+    function renderStatus() {
+      const cfg = loadSiteConfig();
+      document.getElementById('apiBase').value = cfg.apiBase || '';
+      document.getElementById('squareAppId').value = cfg.squareAppId || '';
+      document.getElementById('squareLocationId').value = cfg.squareLocationId || '';
+
+      const cards = [
+        { label: 'Product Catalog', value: '467 imported', ok: true },
+        { label: 'GitHub Pages', value: 'Deployed', ok: true },
+        { label: 'Custom Domain DNS', value: 'Pending GoDaddy update', ok: false },
+        { label: 'Worker API', value: cfg.apiBase ? cfg.apiBase : 'Not configured', ok: !!cfg.apiBase },
+        { label: 'Square Payments', value: cfg.squareAppId ? 'Configured' : 'Not configured', ok: !!cfg.squareAppId },
+      ];
+
+      document.getElementById('status-cards').innerHTML = cards.map(c => `
+        <div class="stat-card" style="border-left:4px solid ${c.ok ? 'var(--teal-600)' : 'var(--orange-500)'}">
+          <div class="label">${c.label}</div>
+          <div class="value" style="font-size:1rem">${c.value}</div>
+        </div>
+      `).join('');
+    }
+
+    function saveConfig(e) {
+      e.preventDefault();
+      const f = e.target;
+      saveSiteConfig({
+        apiBase: f.apiBase.value.trim(),
+        squareAppId: f.squareAppId.value.trim(),
+        squareLocationId: f.squareLocationId.value.trim(),
+      });
+      showToast('Configuration saved');
+      renderStatus();
+    }
+
+    async function testWorker() {
+      const base = document.getElementById('apiBase').value.trim();
+      if (!base) return showToast('Enter Worker URL first');
+      try {
+        const res = await fetch(base + '/api/health');
+        const data = await res.json();
+        showToast(data.ok ? 'Worker is live!' : 'Worker responded but not OK');
+      } catch {
+        showToast('Worker unreachable — deploy first');
+      }
+    }
+
+    document.addEventListener('DOMContentLoaded', renderStatus);
+  </script>
+</body>
+</html>

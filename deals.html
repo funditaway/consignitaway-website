@@ -3,33 +3,66 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="description" content="Daily deals and limited-time offers on consigned items at Consign It Away.">
   <title>Daily Deals | Consign It Away</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <header id="site-header"></header>
-  <div class="page-header">
-    <div class="container">
-      <p class="breadcrumb"><a href="index.html">Home</a> / Daily Deals</p>
+
+  <div class="container" style="padding:2rem 0">
+    <div class="page-header">
       <h1>Daily Deals</h1>
-      <p>Hand-picked consigned bargains</p>
+      <p>Flash sales and limited-time offers on quality consigned items. Deals update daily!</p>
+    </div>
+
+    <div class="product-grid" id="deals-grid">
+      <!-- Populated by JS with discounted items -->
+    </div>
+
+    <div style="margin-top:2rem;text-align:center">
+      <p style="color:var(--gray-500)">Deals are time-limited. Sign up for alerts in your account.</p>
+      <a href="login.html" class="btn btn-primary">Get Deal Alerts</a>
     </div>
   </div>
-  <section class="section">
-    <div class="container">
-      <div class="product-grid" id="deals-grid"></div>
-    </div>
-  </section>
+
   <footer id="site-footer"></footer>
+
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
+    function renderDeals() {
+      const grid = document.getElementById('deals-grid');
+      if (!grid) return;
+
+      // Fake deals: take some products and discount them
+      const deals = (window.PRODUCTS || PRODUCTS).slice(0, 6).map(p => ({
+        ...p,
+        originalPrice: p.price,
+        price: Math.round(p.price * 0.7 * 100) / 100, // 30% off
+        dealEnds: 'Today only'
+      }));
+
+      grid.innerHTML = deals.map(p => `
+        <a href="product.html?id=${p.id}" class="product-card">
+          <div class="product-image">
+            <span class="product-badge shipping" style="background:var(--orange-500)">${p.dealEnds}</span>
+            ${p.image ? `<img src="${p.image}" alt="${p.name}">` : `<span>${p.emoji}</span>`}
+          </div>
+          <div class="product-info">
+            <h3>${p.name}</h3>
+            <div class="product-meta">
+              <span class="product-price" style="color:var(--orange-500)">$${p.price} <small style="text-decoration:line-through;color:var(--gray-500)">$${p.originalPrice}</small></span>
+              <span class="condition-tag">${p.condition}</span>
+            </div>
+            <button class="btn btn-secondary" style="width:100%;margin-top:0.75rem;font-size:0.85rem;padding:0.5rem" onclick="event.preventDefault(); addToCart(${p.id}); showToast('Added to cart!')">Add to Cart</button>
+          </div>
+        </a>
+      `).join('');
+    }
+
     document.addEventListener('DOMContentLoaded', () => {
-      const deals = [...PRODUCTS].sort((a,b) => a.price - b.price).slice(0, 8);
-      document.getElementById('deals-grid').innerHTML = deals.map(p => {
-        const orig = renderProductCard(p);
-        return orig.replace('<div class="product-image">', '<div class="product-image"><span class="product-badge" style="background:var(--orange-500)">Deal</span>');
-      }).join('');
+      renderDeals();
     });
   </script>
 </body>

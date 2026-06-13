@@ -1,3 +1,28 @@
+/* Site configuration (Worker URL, Square keys) — edit via setup.html */
+const CONFIG_KEY = 'cia-site-config';
+function loadSiteConfig() {
+  try { return { apiBase: '', squareAppId: '', squareLocationId: '', ...JSON.parse(localStorage.getItem(CONFIG_KEY) || '{}') }; }
+  catch { return { apiBase: '', squareAppId: '', squareLocationId: '' }; }
+}
+function saveSiteConfig(config) {
+  localStorage.setItem(CONFIG_KEY, JSON.stringify({ ...loadSiteConfig(), ...config }));
+  applySiteConfig();
+}
+function applySiteConfig() {
+  const cfg = loadSiteConfig();
+  if (cfg.apiBase) { window.API_BASE = cfg.apiBase.replace(/\/$/, ''); API_BASE = window.API_BASE; }
+  return cfg;
+}
+function getSquareConfig() {
+  const cfg = loadSiteConfig();
+  return { appId: cfg.squareAppId || '', locationId: cfg.squareLocationId || '' };
+}
+window.loadSiteConfig = loadSiteConfig;
+window.saveSiteConfig = saveSiteConfig;
+window.applySiteConfig = applySiteConfig;
+window.getSquareConfig = getSquareConfig;
+applySiteConfig();
+
 let cart = JSON.parse(localStorage.getItem('cia-cart') || '[]');
 
 function saveCart() {
@@ -10,7 +35,7 @@ function saveCart() {
    Example: 'https://consignitaway-api.yourname.workers.dev'
    Falls back to localStorage for local dev / before deploy.
 */
-let API_BASE = ''; // <-- CHANGE THIS after deploying the Worker (see README)
+let API_BASE = (typeof loadSiteConfig === 'function' ? loadSiteConfig().apiBase : '') || '';
 window.API_BASE = API_BASE;
 
 async function loadListings() {
@@ -257,7 +282,17 @@ function getQueryParam(name) {
   return new URLSearchParams(window.location.search).get(name);
 }
 
+function showLaunchBanner() {
+  if (location.hostname === 'localhost' || location.hostname.includes('github.io')) return;
+  if (sessionStorage.getItem('cia-banner-dismissed')) return;
+  const banner = document.createElement('div');
+  banner.style.cssText = 'background:var(--orange-500);color:#fff;text-align:center;padding:0.6rem 1rem;font-size:0.9rem;position:relative;z-index:200';
+  banner.innerHTML = `Site migration in progress. <a href="setup.html" style="color:#fff;text-decoration:underline">Complete launch setup</a> or visit <a href="https://funditaway.github.io/consignitaway-website/" style="color:#fff">GitHub preview</a>. <button onclick="this.parentNode.remove();sessionStorage.setItem('cia-banner-dismissed','1')" style="background:none;border:none;color:#fff;margin-left:1rem;cursor:pointer">×</button>`;
+  document.body.prepend(banner);
+}
+
 document.addEventListener('DOMContentLoaded', () => {
+  if (typeof applySiteConfig === 'function') applySiteConfig();
   if (!document.querySelector('link[rel="icon"]')) {
     const link = document.createElement('link');
     link.rel = 'icon';
@@ -268,6 +303,7 @@ document.addEventListener('DOMContentLoaded', () => {
   initHeader();
   initFooter();
   updateCartBadge();
+  showLaunchBanner();
 });
 
 /* ========== Simple Cart + Checkout (demo) ========== */
@@ -373,12 +409,12 @@ async function initSquareCheckout(total) {
   const container = document.getElementById('square-card-container');
   if (!container) return;
 
-  // Square sandbox test credentials (public examples; get your own from developer.squareup.com for production)
-  const appId = 'sandbox-sq0idb-YourAppIdReplaceMe';   // <-- REPLACE with your Square sandbox Application ID
-  const locationId = 'YOUR_SANDBOX_LOCATION_ID';       // <-- REPLACE with your sandbox Location ID
+  const sq = (typeof getSquareConfig === 'function') ? getSquareConfig() : {};
+  const appId = sq.appId || 'sandbox-sq0idb-YourAppIdReplaceMe';
+  const locationId = sq.locationId || 'YOUR_SANDBOX_LOCATION_ID';
 
-  if (appId.includes('ReplaceMe')) {
-    showToast('Square demo: Using placeholder credentials. Replace in code for real sandbox testing.');
+  if (!sq.appId || appId.includes('ReplaceMe')) {
+    showToast('Add Square credentials in setup.html for real card processing.');
     // Fall back to regular checkout
     await doCheckout();
     return;

@@ -3,47 +3,62 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="Shop by brand at Consign It Away.">
+  <meta name="description" content="Shop by popular brands at Consign It Away. Quality consigned items from trusted names.">
   <title>Brands | Consign It Away</title>
   <link rel="stylesheet" href="css/styles.css">
 </head>
 <body>
   <header id="site-header"></header>
 
-  <div class="page-header">
-    <div class="container">
-      <p class="breadcrumb"><a href="index.html">Home</a> / Brands</p>
+  <div class="container" style="padding:2rem 0">
+    <div class="page-header">
       <h1>Shop by Brand</h1>
-      <p>Quality consigned items from trusted names</p>
+      <p>Browse consigned items from popular brands. All authenticated and in great condition.</p>
+    </div>
+
+    <div class="category-grid" id="brands-grid">
+      <!-- Populated dynamically -->
+    </div>
+
+    <div style="margin-top:2rem">
+      <p style="color:var(--gray-500)">Don't see your favorite brand? <a href="consign.html">Consign similar items</a> and we'll list them across platforms.</p>
     </div>
   </div>
 
-  <section class="section">
-    <div class="container">
-      <div class="category-grid" id="brands-grid"></div>
-    </div>
-  </section>
-
   <footer id="site-footer"></footer>
+
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
-    const BRANDS = [
-      { name: 'Stafford', emoji: '👔', cat: 'clothing' },
-      { name: 'Suzuki', emoji: '🏍️', cat: 'auto' },
-      { name: 'Hammer Strength', emoji: '💪', cat: 'appliances' },
-      { name: 'Unbranded / Vintage', emoji: '✨', cat: 'collectibles' },
-      { name: 'Office Essentials', emoji: '📎', cat: 'office' },
-      { name: 'Home & Dining', emoji: '🍽️', cat: 'dining' },
-    ];
+    function renderBrands() {
+      const grid = document.getElementById('brands-grid');
+      if (!grid) return;
+
+      // Extract unique "brands" from demo data (using categories as proxy + fake brands)
+      const brandMap = {};
+      (window.PRODUCTS || PRODUCTS).forEach(p => {
+        const brand = p.name.split(' ')[0]; // simplistic "brand" from name
+        if (!brandMap[brand]) brandMap[brand] = [];
+        brandMap[brand].push(p);
+      });
+
+      const brands = Object.keys(brandMap).slice(0, 8);
+
+      grid.innerHTML = brands.map(brand => {
+        const items = brandMap[brand];
+        const sample = items[0];
+        return `
+          <a href="shop.html?q=${encodeURIComponent(brand)}" class="category-card">
+            <div class="emoji" style="font-size:1.8rem;margin-bottom:0.5rem">🏷️</div>
+            <h3>${brand}</h3>
+            <p style="font-size:0.75rem;color:var(--gray-500);margin-top:0.25rem">${items.length} items</p>
+          </a>
+        `;
+      }).join('');
+    }
 
     document.addEventListener('DOMContentLoaded', () => {
-      document.getElementById('brands-grid').innerHTML = BRANDS.map(b => `
-        <a href="shop.html?cat=${b.cat}&q=${encodeURIComponent(b.name)}" class="category-card">
-          <div class="emoji">${b.emoji}</div>
-          <h3>${b.name}</h3>
-        </a>
-      `).join('');
+      renderBrands();
     });
   </script>
 </body>

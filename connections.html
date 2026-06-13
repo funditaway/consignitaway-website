@@ -31,22 +31,36 @@
   <script src="js/products.js"></script>
   <script src="js/main.js"></script>
   <script>
-    function loadConnections() {
+    async function loadConnections() {
       const container = document.getElementById('connections-grid');
       const user = JSON.parse(localStorage.getItem('cia-user') || '{}');
       const sellerId = user.sellerId || 'demo-seller';
 
+      let publishedTo = {};
+      if (window.API_BASE) {
+        try {
+          const listingsRes = await fetch(`${window.API_BASE}/api/listings?sellerId=${sellerId}`);
+          const listings = await listingsRes.json();
+          if (listings.length > 0) {
+            const statusRes = await fetch(`${window.API_BASE}/api/marketplace-status?listingId=${listings[0].id}&sellerId=${sellerId}`);
+            const statusData = await statusRes.json();
+            publishedTo = statusData.publishedTo || {};
+          }
+        } catch (e) { console.warn('API status fetch failed, using local'); }
+      }
+
       const platforms = [
-        { key: 'ebay', name: 'eBay', desc: 'Millions of buyers. Great for most categories.', connected: true },
-        { key: 'amazon', name: 'Amazon', desc: 'Huge reach for new/like-new items.', connected: false },
-        { key: 'facebook', name: 'Facebook / Instagram', desc: 'Local + social selling power.', connected: false },
-        { key: 'whatnot', name: 'Whatnot', desc: 'Live auctions for collectibles & more.', connected: false }
+        { key: 'ebay', name: 'eBay', desc: 'Millions of buyers. Great for most categories.' },
+        { key: 'amazon', name: 'Amazon', desc: 'Huge reach for new/like-new items.' },
+        { key: 'facebook', name: 'Facebook / Instagram', desc: 'Local + social selling power.' },
+        { key: 'whatnot', name: 'Whatnot', desc: 'Live auctions for collectibles & more.' }
       ];
 
       let html = '';
 
       platforms.forEach(p => {
-        const status = p.connected 
+        const isConnected = !!publishedTo[p.key] || localStorage.getItem(`cia-${p.key}-connected`) === 'true';
+        const status = isConnected 
           ? `<span style="color:var(--teal-600);font-weight:600">Connected ✓</span>` 
           : `<span style="color:var(--gray-500)">Not connected</span>`;
 
@@ -62,7 +76,7 @@
             </div>
             <p style="font-size:0.9rem;color:var(--gray-600);margin:0.5rem 0 0.75rem">${p.desc}</p>
             ${action}
-            ${p.connected ? `<div style="font-size:0.75rem;margin-top:0.5rem;color:var(--gray-500)">Last synced: just now</div>` : ''}
+            ${isConnected ? `<div style="font-size:0.75rem;margin-top:0.5rem;color:var(--gray-500)">Last synced: just now</div>` : ''}
           </div>
         `;
       });
